@@ -1,0 +1,48 @@
+/*
+ * Created on Aug 09, 2006
+ * 
+ * All sources, binaries and HTML pages (C) copyright 2004 by Blue Jungle Inc.,
+ * Redwood City CA, Ownership remains with Blue Jungle Inc, All rights reserved
+ * worldwide.
+ */
+
+#include "..\..\common\scripts\rootpass.h"
+
+/////////////////////////////////////////////////////////////////////
+// Returns the super user password (from the property)
+// The returned value does not guarantee validation.
+/////////////////////////////////////////////////////////////////////
+function WSTRING GetSuperUserPassword(hMSI)
+	WSTRING password;
+begin
+	password = GetProperty(hMSI, SUPER_USER_PASSWORD_PROPERTY);
+	return password;
+end;
+
+/////////////////////////////////////////////////////////////////////
+// Validates the super user password
+/////////////////////////////////////////////////////////////////////
+function INT ValidateSuperUserPassword(hMSI)
+	INT iResult;
+	WSTRING password;
+	WSTRING confirm;
+begin
+	DenyNextDialog(hMSI);
+	password = GetSuperUserPassword(hMSI);
+	confirm = GetProperty(hMSI, SUPER_USER_PASSWORD_CONFIRM_PROPERTY);
+	if (StrLength(password) == 0 && StrLength(confirm) == 0) then
+		ShowModalDialog(hMSI, @ERR_TITLE, @ERR_SUPER_USER_REQUIRED, SEVERE);	
+	else  
+		iResult = ValidatePasswords (password, confirm);
+		if (iResult == 0) then
+			AllowNextDialog(hMSI);
+		elseif (iResult == 1) then
+			//No match
+			ShowModalDialog(hMSI, @ERR_TITLE, @ERR_SUPER_USER_PASSWORD_NO_MATCH, SEVERE);	
+		else
+			//Not complex enough
+			ShowModalDialog(hMSI, @ERR_TITLE, @ERR_INVALID_SUPER_USER_PASSWORD, SEVERE);	
+		endif;
+	endif;
+	return ERROR_SUCCESS;
+end;

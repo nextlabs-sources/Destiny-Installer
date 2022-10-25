@@ -1,0 +1,10 @@
+cookbook_path       "#{ENV['START_DIR']}/cookbooks"
+local_mode          true
+chef_zero.enabled   true
+json_attribs        "#{ENV['START_DIR']}/cc_properties.json"
+log_location        "#{ENV['START_DIR']}/installer.log"
+log_level           :info
+verbose_logging     true
+nodename            "localhost"
+node_path           Dir.tmpdir
+cache_path          "#{ENV['START_DIR']}/local_mode_cache"

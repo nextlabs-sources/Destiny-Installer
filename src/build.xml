@@ -1,0 +1,457 @@
+<?xml version="1.0" ?>
+<!DOCTYPE project [
+<!ENTITY classpaths SYSTEM "build-scripts/etc/classpath.skel">
+<!ENTITY taskdefs SYSTEM "build-scripts/etc/build-tasks.skel">
+]>
+
+<project name="Destiny" default="build-all" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+
+    <tstamp>
+        <format property="TODAY" pattern="yyyy-MM-dd"  locale="en,UK" />
+    </tstamp>
+    <property environment="env"/>
+    <echo message="NL External Dir : ${env.NLEXTERNALDIR2}" />
+
+    <!-- Notes: nlbuildroot must be defined before build-scripts/etc/build.properties and
+         build-scripts/etc/build_external.properties
+    -->
+    <property name="nlbuildroot" location="${basedir}/.." />
+
+    <property file="${nlbuildroot}/scripts/build.properties" />
+    <property file="${nlbuildroot}/src/build-scripts/etc/build.properties" />
+    <property file="${nlbuildroot}/src/build-scripts/etc/build_external.properties"/>
+
+    <!-- Need to set this while build.xml lived in this directory rather that top directory -->
+    <property name="ivy.dep.file" value="../ivy.xml" />
+    <property name="package_chef_dir" value="${build.root.dir}/cc_chef" />
+    <property name="cc_chef_linux_dir" value="${package_chef_dir}/cc_linux" />
+    <property name="cc_chef_win_dir" value="${package_chef_dir}/cc_win" />
+	<property name="package_linux_dir" value="${build.root.dir}/package_linux" />
+    <property name="openaz_dir" value="${build.root.dir}/nextlabs-openaz-pep" />
+
+    <!-- FIX ME - Property should be placed in properties file eventually when top level build file moves -->
+    <property name="common.build.script.dir" value="${nlbuildroot}/build_scripts" />
+    <mkdir dir="${common.build.script.dir}" />
+    <import file="${common.build.script.dir}/version_build.xml" />
+    <import file="${common.build.script.dir}/ivy_build.xml" />
+
+    <target name="buildOnly" depends="common_build.init">
+        <exec executable="sh" dir="${nlbuildroot}/dependency-management-helper">
+            <arg line="gradlew clean build"/>
+        </exec>
+		<property name="bin.ver" value="debug"/>
+		<property name="preserve.timestamps" value="true"/>
+        <antcall target="modify-tomcat-files"/>
+        <antcall target="zipCCtoPolicyControllerJava"/>
+    </target>
+
+    <target name="zipOpenAZ">
+        <zip destfile="${build.root.dir}/Nextlabs-OpenAZ-PEP-${version_str}-${build_number}.zip">
+            <zipfileset dir="${openaz_dir}"/> 
+        </zip>
+    </target>
+
+    <target name="modify-tomcat-files">
+        <echo message="Updating web.xml and catalina.properties files"/>
+
+        <!-- Dest files are readonly and copy can't handle that -->
+        <delete file="${build.root.dir}/run/server/tomcat/conf/web.xml" failonerror="true"/>
+        <copy file="${nlbuildroot}/etc/web.xml" tofile="${build.root.dir}/run/server/tomcat/conf/web.xml" verbose="true"/> 
+        <delete file="${build.root.dir}/run/server/tomcat/conf/catalina.properties" failonerror="true"/>
+        <copy file="${nlbuildroot}/etc/catalina.properties" tofile="${build.root.dir}/run/server/tomcat/conf/catalina.properties" verbose="true"/>
+        
+        <echo message="Adding commons-logging-1.2.jar to tomcat/lib"/>
+        <copy file="${xlib_jar_dir}/commons-logging-1.2.jar" tofile="${build.root.dir}/run/server/tomcat/lib/commons-logging-1.2.jar"/>
+    </target>
+    
+    <target name="zipCCtoPolicyControllerJava" depends="set-up-conf-embedded, set-up-conf-tomcat, set-up-conf-jboss, jpc-extras-installer">
+        <echo message="xlib_fate_build_artifacts_bin_zip_file = ${xlib_fate_build_artifacts_bin_zip_file}"/>
+        
+        <echo message="${build.root.dir}/PolicyControllerJava-${product_version_str}-${build_number}.zip"/>
+        
+        <zip destfile="${build.root.dir}/PolicyControllerJava-${product_version_str}-${build_number}.zip">
+            <zipfileset dir="${build.root.dir}/nextlabs"/> 
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="tomcat/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="jbosspc/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="tomcat/dpc/jservice/config/JavaSDKService.properties"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="jbosspc/dpc/jservice/config/JavaSDKService.properties"/>
+
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar" includes="PDPPluginManager-Plugin-client.jar" fullpath="embeddedpdp/jservice/jar/PDPPluginManager-Plugin-client.jar"/>
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar" includes="PDPPluginManager-Plugin-client.jar" fullpath="tomcat/dpc/jservice/jar/PDPPluginManager-Plugin-client.jar"/>
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar" includes="PDPPluginManager-Plugin-client.jar" fullpath="jbosspc/dpc/jservice/jar/PDPPluginManager-Plugin-client.jar"/>
+        	
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config" includes="PDPPluginManagerClient.properties" fullpath="embeddedpdp/jservice/config/PDPPluginManagerClient.properties"/>
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config" includes="PDPPluginManagerClient.properties" fullpath="tomcat/dpc/jservice/config/PDPPluginManagerClient.properties"/>
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config" includes="PDPPluginManagerClient.properties" fullpath="jbosspc/dpc/jservice/config/PDPPluginManagerClient.properties"/>
+            
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar" includes="JWTSecretsManager-Plugin-client.jar" fullpath="embeddedpdp/jservice/jar/JWTSecretsManager-Plugin-client.jar"/>
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar" includes="JWTSecretsManager-Plugin-client.jar" fullpath="tomcat/dpc/jservice/jar/JWTSecretsManager-Plugin-client.jar"/>
+        	<zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar" includes="JWTSecretsManager-Plugin-client.jar" fullpath="jbosspc/dpc/jservice/jar/JWTSecretsManager-Plugin-client.jar"/>
+        	
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config" includes="JWTSecretsManagerClient.properties" fullpath="embeddedpdp/jservice/config/JWTSecretsManagerClient.properties"/>
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config" includes="JWTSecretsManagerClient.properties" fullpath="tomcat/dpc/jservice/config/JWTSecretsManagerClient.properties"/>
+            <zipfileset dir="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config" includes="JWTSecretsManagerClient.properties" fullpath="jbosspc/dpc/jservice/config/JWTSecretsManagerClient.properties"/>
+        	
+            <zipfileset dir="${build.root.dir}/Policy_Controller_Java_Extras" prefix="extras"/>
+        </zip>
+
+        <antcall target="jpc-installer" />
+    </target>
+    
+    <target name="copy-dpc-config-files">
+        <copy todir="${param.dpc.config.root}/security" file="${build.root.dir}/server-security/temp_agent-keystore.p12"/>
+    
+        <copy todir="${param.dpc.config.root}">
+            <fileset dir="${build.root.dir}/config">
+                <include name="commprofile.xml"/>
+                <include name="agentprofile.xml"/>
+                <include name="config.dat"/>
+                <include name="pdp.properties"/>
+                <include name="mapping.xml"/>
+                <include name="xacmlpdpconfig.xml"/>
+                <include name="log4j2.xml"/>
+            </fileset>
+        </copy>
+    </target>
+        
+    <target name="make-dpc-directories">
+        <mkdir dir="${param.dpc.root.dir}"/>
+        <mkdir dir="${param.dpc.root.dir}/certificates"/>
+        <mkdir dir="${param.dpc.root.dir}/config_setup"/>
+        <mkdir dir="${param.dpc.root.dir}/dpc"/>
+        <mkdir dir="${param.dpc.root.dir}/dpc/config"/>
+        <mkdir dir="${param.dpc.root.dir}/dpc/config/security"/>
+        <mkdir dir="${param.dpc.root.dir}/dpc/logs"/>
+        <mkdir dir="${param.dpc.root.dir}/logs"/>
+    </target>
+        
+    <target name="copy-dpc-decrypt-files">
+        <copy todir="${param.dpc.root}">
+            <fileset dir="${build.root.dir}">
+                <include name="decrypt.bat"/>
+                <include name="decrypt.sh"/>
+            </fileset>
+        </copy>
+        
+        <copy todir="${param.dpc.root}/decryptj">
+            <fileset dir="${build.root.dir}">
+                <include name="agent-controlmanager.jar"/>
+                <include name="agent-tools.jar"/>
+                <include name="client-pf.jar"/>
+                <include name="common-domain.jar"/>
+                <include name="common-domain-types.jar"/>
+                <include name="common-framework.jar"/>
+                <include name="common-framework-types.jar"/>
+                <include name="common-pf.jar"/>
+                <include name="crypt.jar"/>
+                <include name="management-types.jar"/>
+                <include name="policy-services.jar"/>
+                <include name="policy-types.jar"/>
+            </fileset>
+            
+            <fileset dir="${xlib_jar_dir}">
+                <include name="activation-1.1.jar"/>
+                <include name="antlr.jar"/>
+                <include name="axiom-api-1.2.21.jar"/>
+                <include name="axis2-adb-1.7.9.jar"/>
+                <include name="castor-0.9.5.4.jar"/>
+                <include name="commons-io-2.1.jar"/>
+                <include name="commons-logging.jar"/>
+                <include name="jaxrpc.jar"/>
+                <include name="xercesImpl.jar"/>
+            	<include name="jakarta-regexp-1.3.jar"/>
+            </fileset>
+        </copy>
+    </target>
+    
+    <target name="set-up-conf-embedded">
+        <mkdir dir="${build.root.dir}/nextlabs/embeddedpdp/jservice"/>
+        <mkdir dir="${build.root.dir}/nextlabs/embeddedpdp/jservice/config"/>
+        <mkdir dir="${build.root.dir}/nextlabs/embeddedpdp/jservice/jar"/>
+    </target>
+    
+    <target name="set-up-conf-tomcat">
+        <antcall target="make-dpc-directories">
+            <param name="param.dpc.root.dir" value="${build.root.dir}/nextlabs/tomcat"/>
+        </antcall>
+        
+        <mkdir dir="${build.root.dir}/nextlabs/tomcat/server_lib"/>
+        <mkdir dir="${build.root.dir}/nextlabs/tomcat/shared_lib"/>
+        <copy todir="${build.root.dir}/nextlabs/tomcat">
+            <fileset dir="${build.root.dir}/run/server/apps">
+                <include name="dpc.war"/>
+            </fileset>
+        </copy>
+        
+        <copy todir="${build.root.dir}/nextlabs/tomcat/config_setup" file="${build.root.dir}/server.txt"/>
+        <copy todir="${build.root.dir}/nextlabs/tomcat/config_setup" file="${build.root.dir}/logging.txt"/>
+
+        <antcall target="copy-dpc-decrypt-files">
+            <param name="param.dpc.root" value="${build.root.dir}/nextlabs/tomcat/dpc/"/>
+        </antcall>
+        
+        <antcall target="copy-dpc-config-files">
+            <param name="param.dpc.config.root" value="${build.root.dir}/nextlabs/tomcat/dpc/config"/>
+        </antcall>
+
+        <copy todir="${build.root.dir}/nextlabs/tomcat/server_lib">
+            <fileset dir="${build.root.dir}/run/server/tomcat/lib"> 
+                <include name="crypt.jar"/>
+                <include name="server-security.jar"/>
+            </fileset>
+        </copy>
+        
+        <copy todir="${build.root.dir}/nextlabs/tomcat/shared_lib">
+            <fileset dir="${build.root.dir}/run/server/tomcat/shared/lib">
+                <!-- We don't need the database drivers - those are for control center only -->
+                <exclude name="mssql-*"/>
+                <exclude name="postgresql-*"/>
+                <exclude name="ojdbc*"/>
+                <exclude name="jcc-*"/>
+                <!-- Is there more we can exclude? -->
+            </fileset>
+            <fileset dir="${xlib_jar_dir}" includes="commons-logging-1.2.jar"/>
+        </copy>
+    </target>
+    
+    <!-- creating jboss pc directory structure -->
+    <target name="set-up-conf-jboss">
+        <antcall target="make-dpc-directories">
+            <param name="param.dpc.root.dir" value="${build.root.dir}/nextlabs/jbosspc"/>
+        </antcall>
+        
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/deployments"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/tools"/>		
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/configuration"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/configuration/main"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/decryptj"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/jservice"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/jservice/config"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/jservice/jar"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/dpc/jservice/jar/javasdk"/>
+        <mkdir dir="${build.root.dir}/nextlabs/jbosspc/tools/crypt"/>		
+        
+        <copy todir="${build.root.dir}/nextlabs/jbosspc/deployments">
+            <fileset dir="${build.root.dir}/run/server/apps">
+                <include name="dpc.war"/>
+            </fileset>
+        </copy>		
+        
+        <copy todir="${build.root.dir}/nextlabs/jbosspc/tools/crypt">
+            <fileset dir="${build.root.dir}/tools/jbosscrypt">
+                <include name="crypt.jar"/>
+                <include name="mkpassword.bat"/>
+                <include name="mkpassword.sh"/>
+                <include name="common-framework.jar"/>
+            </fileset>			
+        </copy>			
+
+        <copy todir="${build.root.dir}/nextlabs/jbosspc/config_setup" file="${build.root.dir}/jboss-standalone.xml.txt"/>
+        
+		<!-- app.properties needs to be copied to destination as dpc.properties -->
+        <copy file="${build.root.dir}/app.properties" tofile="${build.root.dir}/nextlabs/jbosspc/dpc/dpc.properties"/>
+        
+        <antcall target="copy-dpc-config-files">
+            <param name="param.dpc.config.root" value="${build.root.dir}/nextlabs/jbosspc/dpc/config"/>
+        </antcall>
+
+        <antcall target="copy-dpc-decrypt-files">
+            <param name="param.dpc.root" value="${build.root.dir}/nextlabs/jbosspc/dpc"/>
+        </antcall>
+    </target>
+
+
+    <target name="jpc-extras-installer">
+        <echo message="Start copying the Java Policy Controller extras"/>
+
+        <delete dir="${build.root.dir}/Policy_Controller_Java_Extras"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java_Extras"/>
+        <copy todir="${build.root.dir}/Policy_Controller_Java_Extras">
+            <fileset dir="${nlbuildroot}/dependency-management-helper/build/jpc/extras"/>
+        </copy>
+    </target>
+    
+    <target name="jpc-installer" depends="jpc-extras-installer">
+        <echo message="Start building the Java Policy Controller Installer package"/>
+        <delete dir="${build.root.dir}/Policy_Controller_Java" />
+        <delete file="${build.root.dir}/${build.root.dir}/PolicyControllerJava-chef-${product_version_str}-${build_number}.zip" />
+        
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java"/>
+        
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/bin"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/cookbooks"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/dist"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/engine"/>
+		<mkdir dir="${build.root.dir}/Policy_Controller_Java/platform/ppc64_suse"/>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java/cookbooks" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/java_pc/cookbooks">
+				<include name="**"/>
+			</fileset>
+        </copy>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java/linux_engine" failonerror="true">
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+				<include name="engine_linux.zip"/>
+			</fileset>
+            <fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+				<include name="gems_linux.zip"/>
+			</fileset>
+		</copy>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java/windows_engine" failonerror="true">
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+                <include name="engine_winx.zip"/>
+			</fileset>
+            <fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+                <include name="gems_winx.zip"/>
+			</fileset>
+		</copy>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java/dist" failonerror="true">
+			<fileset dir="${build.root.dir}/nextlabs">
+				<include name="**"/>
+                <include name="**/*"/>
+                <include name="**/*.*"/>
+			</fileset>
+	    </copy>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java" failonerror="true">
+            <fileset dir="${src.root.dir}/installer/java_pc">
+                <include name="jpc_properties.json"/>
+                <include name="*.sh"/>
+                <include name="*.bat"/>
+                <include name="README.MD"/>
+                <include name="version.txt"/>
+            </fileset>
+        </copy>
+        
+        <copy todir="${build.root.dir}/Policy_Controller_Java/bin" failonerror="true">
+            <fileset dir="${src.root.dir}/installer/java_pc/bin">
+                <include name="**"/>
+                <include name="**/*"/>
+                <include name="**/*.*"/>
+            </fileset>
+        </copy>
+        
+		<copy file="${chefclient.ppc64.file}" todir="${build.root.dir}/Policy_Controller_Java/platform/ppc64_suse" failonerror="true"/>
+		
+        <replace file="${build.root.dir}/Policy_Controller_Java/bin/install.bat">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+        
+        <replace file="${build.root.dir}/Policy_Controller_Java/bin/install_ui.bat">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+        
+        <replace file="${build.root.dir}/Policy_Controller_Java/bin/install.sh">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+        
+        <replace file="${build.root.dir}/Policy_Controller_Java/bin/suse_install.sh">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+        
+		<replace file="${build.root.dir}/Policy_Controller_Java/bin/install_ui.sh">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+		
+		<replace file="${build.root.dir}/Policy_Controller_Java/bin/suse_install_ui.sh">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+        </replace>
+        
+        <replace file="${build.root.dir}/Policy_Controller_Java/jpc_properties.json">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+            <replacefilter token="@built_date@"  value="${TODAY}"/>
+        </replace>
+        
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/config"/>
+        <mkdir dir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar"/>
+        
+        <!-- PDP plugin manager -->
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar/PDPPluginManager-Plugin-client.jar" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/embeddedpdp/jservice/jar" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config/PDPPluginManagerClient.properties" 
+              todir="${build.root.dir}/Policy_Controller_Java/dist/embeddedpdp/jservice/config" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar/PDPPluginManager-Plugin-client.jar" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config/PDPPluginManagerClient.properties" 
+    		todir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config" failonerror="true"/>
+    	
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar/PDPPluginManager-Plugin-client.jar" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config/PDPPluginManagerClient.properties" 
+    		todir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/config" failonerror="true"/>
+    	
+        <!-- JWT Secrets manager -->
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar/JWTSecretsManager-Plugin-client.jar" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/embeddedpdp/jservice/jar" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config/JWTSecretsManagerClient.properties" 
+              todir="${build.root.dir}/Policy_Controller_Java/dist/embeddedpdp/jservice/config" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar/JWTSecretsManager-Plugin-client.jar" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar" failonerror="true"/>
+        
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config/JWTSecretsManagerClient.properties" 
+    		todir="${build.root.dir}/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config" failonerror="true"/>
+    	
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar/JWTSecretsManager-Plugin-client.jar" 
+    		todir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar" failonerror="true"/>
+    	
+    	<copy file="${build.root.dir}/../dependency-management-helper/build/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config/JWTSecretsManagerClient.properties" 
+    		  todir="${build.root.dir}/Policy_Controller_Java/dist/tomcat/dpc/jservice/config" failonerror="true"/>
+        
+        <replace file="${build.root.dir}/Policy_Controller_Java/version.txt">
+            <replacefilter token="@jpc_version@"  value="${product_version_str}"/>
+            <replacefilter token="@build_no@"  value="${build_number}"/>
+            <replacefilter token="@built_date@"  value="${TODAY}"/>
+        </replace>
+        
+        <zip destfile="${build.root.dir}/PolicyControllerJava-Linux-chef-${product_version_str}-${build_number}.zip">
+            <zipfileset dir="${build.root.dir}/Policy_Controller_Java" prefix="Policy_Controller_Java">
+                <exclude name="linux_engine/**"/>
+                <exclude name="windows_engine/**"/>
+            </zipfileset>
+            <zipfileset src="${build.root.dir}/Policy_Controller_Java/linux_engine/engine_linux.zip" prefix="Policy_Controller_Java/engine"/>
+            <zipfileset src="${build.root.dir}/Policy_Controller_Java/linux_engine/gems_linux.zip" prefix="Policy_Controller_Java/engine"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="Policy_Controller_Java/dist/tomcat/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="Policy_Controller_Java/dist/tomcat/dpc/jservice/config/JavaSDKService.properties"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="Policy_Controller_Java/dist/jbosspc/dpc/jservice/config/JavaSDKService.properties"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+
+            <zipfileset dir="${build.root.dir}/Policy_Controller_Java_Extras" prefix="extras">
+                <exclude name="*windows*"/>
+            	<exclude name="*.exe"/>
+            </zipfileset>
+        </zip>
+        
+        <zip destfile="${build.root.dir}/PolicyControllerJava-Windows-chef-${product_version_str}-${build_number}.zip">
+            <zipfileset dir="${build.root.dir}/Policy_Controller_Java" prefix="Policy_Controller_Java">
+                <exclude name="linux_engine/**"/>
+                <exclude name="windows_engine/**"/>
+            </zipfileset>
+            <zipfileset src="${build.root.dir}/Policy_Controller_Java/windows_engine/engine_winx.zip" prefix="Policy_Controller_Java/engine"/>
+            <zipfileset src="${build.root.dir}/Policy_Controller_Java/windows_engine/gems_winx.zip" prefix="Policy_Controller_Java/engine"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="Policy_Controller_Java/dist/tomcat/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="Policy_Controller_Java/dist/tomcat/dpc/jservice/config/JavaSDKService.properties"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/JavaSDKService.properties" fullpath="Policy_Controller_Java/dist/jbosspc/dpc/jservice/config/JavaSDKService.properties"/>
+            <zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/java/nlJavaSDK2.jar" fullpath="Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar/javasdk/nlJavaSDK2.jar"/>
+
+            <zipfileset dir="${build.root.dir}/Policy_Controller_Java_Extras" prefix="extras">
+                <exclude name="*linux*"/>
+            	<exclude name="*.tar.gz"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    
+</project>

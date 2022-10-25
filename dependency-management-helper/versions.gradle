@@ -1,0 +1,8 @@
+def versions = [:]
+
+versions.java = '11.0.15_10'
+versions.pdpPluginManager = '1.0.0-SNAPSHOT'
+versions.jwtSecretsManager = '1.0.0-SNAPSHOT'
+versions.tomcat = '9.0.64'
+
+ext.versions = versions

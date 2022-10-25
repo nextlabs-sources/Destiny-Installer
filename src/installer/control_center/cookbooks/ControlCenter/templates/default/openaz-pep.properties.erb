@@ -1,0 +1,92 @@
+#----------------------------------------------------------------------------# 
+#                    NEXTLABS OpenAZ PEP Properties                          #
+#----------------------------------------------------------------------------#
+
+# PDP Engine configurations
+#      - Embedded PDP:      com.nextlabs.openaz.pdp.EmbeddedPDPEngine
+#      - REST/ CloudAZ PDP: com.nextlabs.openaz.pdp.RestPDPEngine
+#-----------------------------------------------------------------------------
+# PDPEngine class, when using embedded PDP, set to "com.nextlabs.openaz.pdp.EmbeddedPDPEngine"
+nextlabs.pdp.engine.name=com.nextlabs.destiny.console.utils.InMemoryPDPEngine
+
+#
+# When using Embedded PDP configure the properties below
+
+# path to dpc folder: Embeded PDP requires dpc folder path which includes all 
+# the resources required for embedded pdp
+# E.g. For Windows Environment: nextlabs.dpc.root=C:/nextlabs_embedded_pdp/dpc
+#                               or nextlabs.dpc.root=C:\\nextlabs_embedded_pdp\\dpc
+# For Linux Environment:        nextlabs.dpc.root=/home/nextlabs_embedded_pdp/dpc
+#-----------------------------------------------------------------------------
+# nextlabs.dpc.root=<path_to_embeddedPDP_dpc_folder>
+
+#
+# When using REST/ CloudAz PDP configure the properties below
+
+
+# The host of CloudAz server eg: saas-jpc.cloudaz.com
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.host=<CloudAz REST API host>
+
+# The port on which the CloudAz service is listening on the server
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.port=443
+
+# Whether the CloudAz service is over https (true or false)
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.https=true
+
+# The authentication settings to connect with the REST/CloudAz service
+# Two authentication type are available to use
+#      - No authentication required: NONE 
+#      - Use with OAuth2 provided authentication service: OAUTH2
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.auth_type=OAUTH2
+
+
+#
+# OAUTH2 Related configurations
+#  only if nextlabs.cloudaz.auth_type is OAUTH2
+
+# The Oauth2 Authorization Grant Type 
+#  available grant type is 
+#       - client_credentials (default)
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.oauth2.grant_type=client_credentials
+
+# The OAuth2 server configurations
+#  Default oauth2 service is provided by control center server, in that case 
+#  configure control center server host and port
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.oauth2.server=<control center host>
+# nextlabs.cloudaz.oauth2.port=<control center port>
+# nextlabs.cloudaz.oauth2.https=true
+
+# Client Id to identify the client connecting using Oauth2 
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.oauth2.client_id=<CLIENT_ID>
+
+# Client secret for Oauth2 client credentials grant 
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.oauth2.client_secret=<CLIENT_SECRET>
+
+# Oauth endpoint to get the token for the client credential grant
+#   - CloudAZ endpoint: /oauth/token 
+#   - REST endpoint   : /cas/token
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.oauth2.token_endpoint_path=/cas/token
+
+# Ignore HTTPS self signed certificates error, if using self  signed 
+# certificates
+#-----------------------------------------------------------------------------
+# nextlabs.cloudaz.ignore_https_certificate=true
+
+
+# OpenAZ api configuration
+#  no need to change this unless required
+#-----------------------------------------------------------------------------
+xacml.pdpEngineFactory=com.nextlabs.openaz.pdp.PDPEngineFactoryImpl
+
+# Mapper classes used internally to map requests
+#-----------------------------------------------------------------------------
+pep.mapper.classes=com.nextlabs.openaz.pepapi.RecipientMapper,com.nextlabs.openaz.pepapi.DiscretionaryPoliciesMapper,com.nextlabs.openaz.pepapi.HostMapper,com.nextlabs.openaz.pepapi.ApplicationMapper

@@ -1,0 +1,234 @@
+{
+    "title": "Control Center Server - Installation",
+    "back_btn": "Back",
+    "next_btn": "Next",
+    "cancel_btn": "Cancel",
+    "cancel_confirm": "Are you sure you want to cancel Control Center Server Installation?",
+    "finish_btn": "Finish",
+    "skip_btn": "Skip",
+    "browse_file_btn": "Browse",
+    "browse_folder_btn": "Change",
+    "generate_btn": "Generate",
+    "common": {
+        "company_name": "Nextlabs",
+        "product_name": "Control Center Server"
+    },
+    "welcome_page": {
+        "welcome_para": "Welcome to the installation wizard",
+        "copyright_message": "WARNING: This product is protected by copyright law and international treaties."
+    },
+    "agreement_page": {
+        "accept_message": "Agree &amp; proceed",
+        "reject_message": "I don't agree"
+    },
+    "installation_mode_page": {
+        "heading": "Uninstall or Upgrade",
+        "existing_server_version_template": "Existing version: %s",
+        "existing_server_location_template": "Destination folder: %s",
+        "installer_version_template": "Installer version: %s",
+        "remove_radio": "Remove",
+        "upgrade_radio": "Upgrade",
+        "server_running_alert": "The existing server is running, do you want to stop it to proceed?",
+        "server_stop_error": "Error stopping the server, you may manually stop it to proceed.",
+        "logqueue_not_empty": "exisitng server's logqueue folder contains logs, please remove the logs to continue.",
+        "not_supported_help_note": "You have control center version: %s installed. Please uninstall it first to proceed with the installation of version %s",
+        "not_upgradable_help_note": "You have control center version: %s [legacy] installed. Please uninstall it first to proceed with the installation of version %s"
+    },
+    "install_dir_page": {
+        "heading" : "Destination Folder",
+        "help_note": "Click next to install to this folder, or click Change to install to another folder",
+        "install_dir_label": "Install Control Center Server to: "
+    },
+    "setup_type_page": {
+        "heading": "Setup Type",
+        "help_note": "Choose the setup type that best suits your needs",
+        "field_label" : "Please select a setup type",
+        "module_selection_heading": "Select the program features to install",
+        "complete_radio": "Complete",
+        "complete_help_note" :  "All program features will be installed",
+        "custom_radio": "Custom",
+        "custom_help_note" : "Choose which program features you want installed and where they will be installed. Refer to CC installation document for custom setup"
+    },
+    "server_location_page": {
+        "heading": "Management Server Location",
+        "help_note": "Please provide the location of the management server used by the components you selected",
+        "installed_cc_host": "Management server host",
+        "installed_cc_port": "Management server port",
+        "trust_store_password": "Please enter the trust store password to access this management server",
+        "key_store_password": "Please enter the key store password to access this management server"
+    },
+    "license_page": {
+        "heading": "License File Location",
+        "help_note": "Please locate the license.dat file required for installing Control Center Server, if you have not obtained this file, please cancel the installation and contact Nextlabs to request for a license file",
+    	"invalid_file": "Invalid or expired license file."
+    },
+    "ad_page": {
+        "heading": "Application User Authentication",
+        "help_note": "Enter the source domain to authenticate Control Center Server application users. If you don't want to use integrated Windows authentication, click Skip. You can change this configuration at a later time.",
+        "ad_base_DN_hint": "(e.g. dc=bluejungle)",
+        "ad_username_hint": "(e.g. smith)",
+        "test_connnection_btn": "Test Connection",
+        "test_connnection_success": "The connection established successfully",
+        "test_connnection_failed_template": "Failed to establish the connection using given connection details:\n%s",
+        "proceed_with_connection_failed": "Failed to connect to the AD server.\nBut you can still proceed and modify the server settings after installation.\nDo you want to proceed?"
+    },
+    "db_page": {
+        "heading": "Database Server",
+        "help_note": "Please enter the database server settings below",
+        "MSSQL": "MSSQL",
+        "ORACLE": "Oracle",
+        "ssl_connection": "SSL connection",
+        "hostname": "Hostname",
+        "port": "Port",
+        "name": "Database name/SID",
+        "username": "Username",
+        "password": "Password",
+        "validate_server": "Validate server",
+        "ssl_certificate": "CA/Server certificate", 
+        "browse": "Browse",
+        "server_dn": "Server DN",
+        "test_connnection_btn": "Test Connection",
+        "test_connnection_success": "The connection established successfully",
+        "test_connnection_failed_template": "Failed to establish the connection using given connection details:\n%s"
+    },
+    "administrator_passwd_page": {
+        "heading": "Super User Password",
+        "help_note": "Enter the Administrator password. The administrator is the build-in administrative user for all Control Center Server Applications",
+        "admin_login_name" : "Administrator Login Name:",
+        "password": "Password:",
+        "confirm_password": "Please confirm your password:"
+    },
+    "certs_page": {
+        "heading": "Trust Store Password",
+        "help_note": "Please enter a password to access the Trust Store for Control Center Server",
+        "trust_store_password": "Password:",
+        "confirm_password": "Please confirm your password:"
+    },
+    "key_store_page": {
+        "heading": "Key Store Password",
+        "help_note": "Please enter a password to access the Key Store for Control Center Server",
+        "key_store_password": "Password:",
+        "confirm_password": "Please confirm your password:"
+    },
+    "service_port_page": {
+        "heading": "Port Numbers",
+        "help_note": "Control Center Server is going to use the following ports. If needed, you can change the port numbers below"
+    },
+    "data_transportation_page": {
+        "heading": "Policy/Component Export Format",
+        "plain_radio": "Plain text",
+        "plain_note": "Data will be imported and exported in plain text format only",
+        "sande_radio": "Signed and encrypted (with shared key)",
+        "sande_note_1": "Exported data will be signed with the exporter's private key and encrypted with shared key below",
+        "sande_note_2": "Recipient requires shared key below to decrypt the file in order to read its content",
+        "shared_key": "Shared key (Enter your shared key or generate one)",
+        "allow_import_plain_text": "Allow import plain text data",
+        "allow_export_plain_text": "Allow export plain text data",
+        "generate_key_failed_template": "Failed to generate shared key: \n%s"
+    },
+    "mail_server_page": {
+        "heading": "Mail Server settings",
+        "help_note": "In order for Control Center Server to send email notifications, please enter the location of your mail server. If required, please enter valid credentials to access the mail server",
+        "test_connnection_btn": "Test Connection",
+        "test_connnection_success": "The connection established successfully",
+        "test_connnection_failed_template": "Failed to establish the connection using given connection details:\n%s",
+        "proceed_with_connection_failed": "Failed to connect to the mail server.\nBut you can still proceed and modify the server settings after installation.\nDo you want to proceed?"
+    },
+    "ready_to_install_page": {
+        "install": {
+            "heading": "Ready to install the program",
+            "help_note": "The wizard is ready to begin installation",
+            "help_note_2": "Click next to begin the installation",
+            "help_note_3": "If you want to review or change any of your installation settings, click Back.\n\nClick Cancel to exit the wizard"
+        },
+        "remove": {
+            "heading": "Ready to uninstall the server",
+            "help_note": "The wizard is ready to begin uninstallation",
+            "help_note_2": "Click next to begin the uninstallation",
+            "help_note_3": "If you want to review or change any of your uninstallation settings, click Back.\n\nClick Cancel to exit the wizard"
+        },
+        "upgrade": {
+            "heading": "Ready to upgrade the server",
+            "help_note": "The wizard is ready to begin upgrade",
+            "help_note_2": "Click next to begin the upgrade",
+            "help_note_3": "If you want to review or change any of your upgrade settings, click Back.\n\nClick Cancel to exit the wizard"
+        }
+    },
+    "install_page": {
+        "progress_save_config": "Saving Collected Information",
+        "progress_start_chef": "Starting installation...",
+        "progress_finish": "Installation completed",
+        "progress_remove_finish": "Uninstallation completed",
+        "progress_upgrade_finish": "Upgrade completed",
+        "progress_canceled": "Installation canceled",
+        "progress_rollback": "Rollbacking files...",
+        "progress_rollback_done": "Rollback completed",
+        "progress_failed": "Installation Failed"
+    },
+    "finish_page": {
+        "install_finish_body": "You have finished installation of Control Center Server",
+        "remove_finish_body": "You have successfully uninstalled Control Center Server",
+        "upgrade_finish_body": "You have successfully upgraded Control Center Server",
+        "aborted_body": "You have canceled the installation and the installation didn't make change to your system",
+        "failed_body": "The installation failed. Sorry",
+        "start_service": "Start Control Center Server"
+    },
+    "inputs": {
+        "dms_component": "Management Server",
+        "dac_component": "Intelligence Server",
+        "dps_component": "Policy Management Server",
+        "dem_component": "Enrollment Manager",
+        "admin_component": "Administrator",
+        "reporter_component": "Reporter",
+        "dabs_component": "ICENet Server",
+        "dkms_component": "Key Management Server",
+        "cc_console_component": "Control Center Console",
+        "installed_cc_host": "Management server host",
+        "installed_cc_port": "Management server port",
+        "db_connection_url": "Connection string",
+        "db_hostname": "Hostname",
+        "db_port": "Port",
+        "db_name": "Database name/SID",
+        "db_username": "Username",
+        "db_password": "Password",
+        "db_ssl_certificate": "CA/Server certificate",
+        "db_server_dn": "Server DN",
+        "trust_store_password": "SSL Certificate Password",
+        "key_store_password": "Keystore Password",
+        "web_service_port_no": "Web service port number",
+        "web_application_port_no": "Web application port number",
+        "config_service_port_no": "Configuration service port number",
+        "data_transportation_shared_key": "Shared key",
+        "mail_server_url": "Mail server location",
+        "mail_server_port": "Mail server port",
+        "mail_server_username": "Username",
+        "mail_server_password": "Password",
+        "mail_server_from": "From",
+        "mail_server_to": "To",
+        "installation_dir": "Installation destination",
+        "license_file_location": "License file location",
+        "admin_user_password": "Super user password",
+        "web_service_port": "Port number",
+        "web_application_port": "Port number",
+        "config_service_port": "Port number"
+    },
+    "ErrorMsgTemplate": "The %s you specified is not valid: %s",
+    "validator_errors": {
+        "ip": "not a valid ip adrress",
+        "hostname": "not a valid hostname",
+        "port": "not a valid port",
+        "dir": "the directory is not exist or valid",
+        "dir_contain_space": "the directory specified contains space, which is not supported",
+        "file": "the file you specified is not exist",
+        "non_empty": "should not be empty",
+        "key_tool_password": "must be between 10 and 128 non-whitespace characters, and must contain at least one number, one lowercase letter, one uppercase letter, one non-alphanumeric character, and contain no more than two identical consecutive characters",
+        "user_password": "must be between 10 and 128 non-whitespace characters, and must contain at least one number, one lowercase letter, one uppercase letter, one non-alphanumeric character, and contain no more than two identical consecutive characters"
+    },
+    "pop_up_messages": {
+        "installation_dir_create": "The installation dir you specified doesn't exist, do you want to create the folder?",
+        "create_folder_failed": "failed to create the directory, do you have enough permission?",
+        "passwd_repeat_no_match": "passwords you input do not match",
+        "db_server_connect_failed": "failed to connect to the DB server, please check the input",
+        "db_connection_string_template": "Database connection string is not valid for %s"
+    }
+}

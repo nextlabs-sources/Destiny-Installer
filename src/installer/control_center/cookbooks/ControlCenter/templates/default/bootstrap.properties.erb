@@ -1,0 +1,4 @@
+spring.cloud.config.uri=https://<%= @host %>:<%= @config_service_port %>/config-service
+spring.cloud.config.username=config-client
+spring.cloud.config.password=<%= @config_service_encrypted_password %>
+spring.cloud.config.fail-fast=true

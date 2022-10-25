@@ -1,0 +1,44 @@
+<fileset id="hibernate.lib" dir="${hibernate.home}/lib">
+	<include name="cglib-full-2.0.2.jar"/>
+	<include name="dom4j-1.4.jar"/>
+	<include name="jta.jar"/>
+	<include name="odmg-3.0.jar"/>
+	<include name="../../ehcache/ehcache-1.1/ehcache-1.1.jar"/>
+</fileset>
+
+<path id="jcsc.classpath">
+    <pathelement location="${xlib_jar_dir}/JCSC.jar"/>
+    <pathelement location="${xlib_jar_dir}/gnu-regexp.jar"/>
+</path>
+
+<path id="wsdl2java.classpath">
+    <path refid="compile.classpath"/>
+  	<pathelement location="${build.tasks.dir}/wsgen-ant.jar"/>
+  	<pathelement location="${build.tasks.dir}/wsgen.jar"/>
+</path>
+
+<taskdef name="wsdl2java" classname="com.bluejungle.destiny.wsgen.SecureWsdl2javaAntTask">
+    <classpath refid="wsdl2java.classpath"/>
+</taskdef>
+
+<taskdef name="java2wsdl" classname="org.apache.axis.tools.ant.wsdl.Java2WsdlAntTask">
+	<classpath refid="compile.classpath"/>
+</taskdef>
+
+<taskdef name="jcsc" classname="rj.tools.jcsc.ant.JCSCTask">
+	<classpath refid="jcsc.classpath"/>
+</taskdef>
+
+<taskdef resource="checkstyletask.properties" classpath="${xlib_jar_dir}/checkstyle-all-3.5.jar"/> 
+
+<taskdef resource="net/sf/antcontrib/antlib.xml">
+  <classpath>
+    <pathelement location="${xlib_jar_dir}/ant-contrib.jar"/>
+  </classpath>
+</taskdef>
+
+<taskdef name="allatori" classname="com.allatori.ant.ObfuscatorTask">
+  <classpath>
+    <pathelement location="${xlib_jar_dir}/allatori.jar"/>
+  </classpath>
+</taskdef>

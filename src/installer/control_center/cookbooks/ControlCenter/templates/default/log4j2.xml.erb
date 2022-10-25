@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="logging.pattern">%d %-5p [%4.15t] %c{1.}: %m%n</Property>
+        <Property name="file.prefix">${sys:cc.home}/server/logs/cc</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${logging.pattern}"/>
+        </Console>
+        <RollingFile name="RootLogFile" fileName="${file.prefix}.log"
+                     filePattern="${file.prefix}-%i.log.gz" createOnDemand="true">
+            <PatternLayout>
+                <Pattern>${logging.pattern}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="2 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="Console" level="WARN"/>
+            <AppenderRef ref="RootLogFile" level="INFO"/>
+        </Root>
+    </Loggers>
+</Configuration>

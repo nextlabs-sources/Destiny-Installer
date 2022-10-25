@@ -1,0 +1,397 @@
+#include "..\..\common\scripts\agentcommon.h"
+#include "..\..\common\scripts\common.h"
+#include "..\..\common\scripts\constants.h"
+#include "..\..\common\scripts\logging.h"
+
+#ifndef AGENT_COMMON_IMPL
+
+////////////////////////////////////////////////////////////////////////////////
+// This function is called before copying the files.
+// If the installation is silent, it does not reboot at the end of the install
+//////////////////////////////////////////////////////////////////////////////// 
+function INT BeforeOnMoving(hMSI)
+begin
+	return ERROR_SUCCESS;
+end;
+
+////////////////////////////////////////////////////////////////////////////////
+// This function checks the current status of the agent service. If the service
+// is started, this function marks a flag to say that the agent service needs to
+// be stopped before any maintenance (repair or remove), and another flag saying
+// whether the service should be restarted after the maintenance (if it was 
+// stopped already, we may not want to do that!).
+function INT CheckAgentMaintenanceStatus(hMSI)
+	INT iResult;
+	WSTRING password;
+	WSTRING value;
+begin
+	if (IsAgentStopped(hMSI) == FALSE) then
+		//Check if the uninstallation password was
+		//supplied in command line. If it was, then try it
+		//first. If the password is invalid, we consider that
+		//the agent still needs to be stopped, it is not fatal.
+		password = GetProperty(hMSI, UNINSTALL_PASSWORD_PROP_NAME);
+		value = "1";
+		if ((StrLength(password) > 0) && (LoadAgentControllerDLL(hMSI) == ERROR_SUCCESS)) then
+			iResult = stopAgentService(password);
+ 			switch (iResult)
+ 				case ERROR_INCORRECT_PASSWORD:
+ 					//WriteToLogFile(hMSI, "Incorrect password for uninstallation - Giving second chance in UI mode.");
+					value = "1";
+			 	case ERROR_AGENT_NOT_STOPPED:
+			 		//WriteToLogFile(hMSI, "Error: Agent could not be stopped - Giving second chance in UI mode.");
+					value = "1";
+			 	case ERROR_AGENT_NOT_RUNNING:
+					//WriteToLogFile(hMSI, "The agent was not running.");
+					value = "1";
+				default:                                            
+					//WriteToLogFile(hMSI, "Uninstallation password is valid. Agent was stopped.");
+					value = "0";
+			endswitch;
+			UnloadAgentControllerDLL(hMSI);	
+		endif;
+		SetProperty(hMSI, NEED_AGENT_STOP_PROPERTY_NAME, value);
+	else
+		SetProperty(hMSI, NEED_AGENT_STOP_PROPERTY_NAME, "0");
+	endif;
+end;
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           
+// Function:  ConfigureAgentCommProfile
+//                                                                           
+//  Purpose:  Places the communication profile configuration in the right location 
+//			  and adds the right ICENet server location in the file
+//
+//  Returns: 0 if sucessful
+//           1 if any error occurs
+//                                                                           
+///////////////////////////////////////////////////////////////////////////////
+function INT ConfigureAgentCommProfile(hMSI)
+	WSTRING configFileName;
+	WSTRING icenetLocation;
+	WSTRING installedConfigFileName;
+	WSTRING sPortValue;
+	INT  iResult;
+	WSTRING sResult;
+begin  
+ 	icenetLocation = GetProperty(hMSI, ICENET_SERVER_LOCATION_PROP_NAME);
+	NumToStr(sPortValue, GetPortNumber(hMSI, icenetLocation, DEFAULT_WEB_SERVICE_PORT));
+	configFileName = SUPPORTDIR ^ "commprofile.xml";
+	installedConfigFileName = INSTALLDIR ^ "\\config\\commprofile.xml";
+	iResult = CopyFile(configFileName, installedConfigFileName);
+	if (iResult == ERROR_SUCCESS) then
+    	WriteToLogFile(hMSI, "Copied agent configuration file from " + configFileName +" to "+ installedConfigFileName);
+    else
+		NumToStr(sResult, iResult);
+ 		WriteToLogFile(hMSI, "Error copying file " + configFileName + " to " + installedConfigFileName +". Result returned is : " + sResult);
+    endif;
+	ReplaceInFile(hMSI, installedConfigFileName, ICENET_HOST_TOKEN, GetHostName(hMSI, icenetLocation), FALSE);
+	ReplaceInFile(hMSI, installedConfigFileName, ICENET_PORT_TOKEN, sPortValue, FALSE);
+    //Returns an error if it failed to install the file - This will stop the installation
+    return iResult;
+end;            
+
+///////////////////////////////////////////////////////////////////////////////
+// Function:  ConfigureAgentLogging
+//  Purpose:  Configure the logging.properties file for the agent
+///////////////////////////////////////////////////////////////////////////////
+function INT ConfigureAgentLogging(hMSI)
+	WSTRING bluejungleHome;
+	WSTRING configFileName;
+	WSTRING installedConfigFileName;
+	WSTRING sPortValue;
+	INT  iResult;
+	WSTRING sResult;
+begin  
+	configFileName = SUPPORTDIR ^ "logging.properties-template";
+	installedConfigFileName = INSTALLDIR ^ "\\config\\logging.properties";
+	iResult = CopyFile(configFileName, installedConfigFileName);
+	if (iResult == ERROR_SUCCESS) then
+    	WriteToLogFile(hMSI, "Copied logging configuration file from " + configFileName +" to "+ installedConfigFileName);
+    else
+		NumToStr(sResult, iResult);
+ 		WriteToLogFile(hMSI, "Error copying file " + configFileName + " to " + installedConfigFileName +". Result returned is : " + sResult);
+    endif;
+    bluejungleHome = INSTALLDIR;
+    StrRemoveLastSlash(bluejungleHome);
+    StrReplace(bluejungleHome, '\\', '/', 0);
+	ReplaceInFile(hMSI, installedConfigFileName, BLUEJUNGLE_HOME_TOKEN, bluejungleHome, FALSE);
+    //Create an empty log directory
+    CreateDir(INSTALLDIR ^ "agentLog");
+    return iResult;
+end;            
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Discover and populate the ICEnet server dropdown control
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function INT DiscoverIcenetServerLocations(hMSI)
+    WSTRING firstServer;
+    INT	   iResult;
+    LIST   serverList;
+begin
+	if (GetProperty(hMSI, NEED_DISCOVERY_PROP_NAME) == "1") then
+		serverList = ListCreate(STRINGLIST);
+		iResult = DiscoverIcenetServersLocations(hMSI, @ICENET_SERVER_LOCATION, serverList);
+		if (iResult == ERROR_SUCCESS) then
+			//Sets the first item in the list
+			iResult = ListGetFirstString (serverList, firstServer);
+			if (iResult == 0) then
+				SetProperty(hMSI, ICENET_SERVER_LOCATION_PROP_NAME, firstServer);
+			endif;			
+		endif;
+		ListDestroy(serverList);
+		SetProperty(hMSI, NEED_DISCOVERY_PROP_NAME, "0");
+	endif;
+	return ERROR_SUCCESS;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+// This function returns TRUE if the agent is already stopped, FALSE otherwise
+//////////////////////////////////////////////////////////////////////////////
+function BOOL IsAgentStopped(hMSI)
+	NUMBER agentServiceState;
+	NUMBER result;
+begin
+	result = ServiceGetServiceState(GetProperty(hMSI, AGENT_SERVICE_NAME_PROPERTY_NAME), agentServiceState);
+	if (result >= ISERR_SUCCESS) then
+		if (agentServiceState != SERVICE_STOPPED) then
+			return FALSE;
+		else
+			return TRUE;
+		endif;
+	else
+		//If error, assume the service did not stop
+		return FALSE;
+	endif;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+// This function returns TRUE if the agent is run from the system user, 
+// FALSE otherwise
+//////////////////////////////////////////////////////////////////////////////
+function BOOL IsRunAsSystem(hMSI)
+	WSTRING currentUserSid;
+	WSTRING currentUserName;
+	BOOL result;
+begin
+	result = FALSE;
+	currentUserSid = GetProperty(hMSI, "UserSID");
+	currentUserName = GetProperty(hMSI, "LogonUser");
+	if (currentUserSid == "S-1-5-18" && currentUserName == "SYSTEM") then
+		result = TRUE;
+	endif;
+	return result;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+// This function loads the agent controller DLL.
+// Returns ERROR_SUCCESS if succeeded, -1 otherwise
+//////////////////////////////////////////////////////////////////////////////
+function INT LoadAgentControllerDLL(hMSI)
+	WSTRING agentControllerDLLName;
+	INT iResult;
+begin
+	agentControllerDLLName = SUPPORTDIR ^ AGENT_CONTROLLER_DLL_NAME;
+	iResult = UseDLL(agentControllerDLLName);
+ 	if (iResult != ERROR_SUCCESS) then
+ 		WriteToLogFile(hMSI, "Unable to load the agent controller DLL");
+ 		iResult = -1;
+ 	endif;
+ 	return iResult;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//  FUNCTION:   OnRemoveInstallation
+//
+//  EVENT:      This function is called during uninstallation. Any 
+//				uninstallation related custom behavior happens here.
+//
+////////////////////////////////////////////////////////////////////////////// 
+function INT OnRemoveInstallation(hMSI)
+begin  
+	if (IsFullUninstallation(hMSI)) then
+		DeleteDir(INSTALLDIR, ALLCONTENTS);
+	endif;
+	return ERROR_SUCCESS;
+end;
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           
+// Function:  ShutdownAgentService
+//                                                                           
+//  Purpose:  Attempts to shutdown the service by calling the agent shutdown API. 
+//            A password is provided to shutdown the service.
+//
+//  Returns: 0 if sucessful
+//           1 if password is incorrect
+//           2 if some other fatal error occured
+//                                                                           
+///////////////////////////////////////////////////////////////////////////////
+function INT ShutdownAgentService(hMSI)   
+	WSTRING agentControllerDLLName;
+	WSTRING agentStoppedValue;
+	WSTRING password;
+	INT iResult;
+	INT returnValue;
+begin            
+	returnValue = 0;
+	if (IsAgentStopped (hMSI) == TRUE) then
+		return 0;
+	elseif (IsRunAsSystem(hMSI) == TRUE) then
+		//Group policy uninstallation
+		return ShutdownAgentWithChallenge(hMSI);
+	endif;
+	
+	if (LoadAgentControllerDLL(hMSI) != ERROR_SUCCESS) then 
+ 		returnValue = 2;
+ 	else
+ 		password = GetProperty(hMSI, UNINSTALL_PASSWORD_PROP_NAME);
+ 		//WriteToLogFile(hMSI, "Invoking the stopAgentService DLL");
+ 		iResult = stopAgentService(password);
+ 		switch (iResult)
+ 			case ERROR_INCORRECT_PASSWORD:
+ 				//WriteToLogFile(hMSI, "Incorrect password for uninstallation.");
+		 		returnValue = 1;
+		 	case ERROR_AGENT_NOT_STOPPED:
+		 		//WriteToLogFile(hMSI, "Error: Agent could not be stopped.");
+		 		returnValue = 2;
+		 	case ERROR_AGENT_NOT_RUNNING:
+				//WriteToLogFile(hMSI, "The agent was not running.");
+				SetProperty(hMSI, AGENT_STOPPED_PROP_NAME, "1");
+			default:                                            
+				//WriteToLogFile(hMSI, "Uninstallation password is valid. Agent was stopped.");
+				SetProperty(hMSI, AGENT_STOPPED_PROP_NAME, "1");
+		 endswitch;
+ 	endif;
+ 
+	 UnloadAgentControllerDLL(hMSI);
+	 return returnValue;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+// This function unloads the agent controller DLL.
+// Returns ERROR_SUCCESS if succeeded, -1 otherwise
+//////////////////////////////////////////////////////////////////////////////
+function INT UnloadAgentControllerDLL(hMSI)
+	WSTRING agentControllerDLLName;
+	INT iResult;
+begin
+	agentControllerDLLName = SUPPORTDIR ^ AGENT_CONTROLLER_DLL_NAME;
+	iResult = UnUseDLL(agentControllerDLLName);
+ 	if (iResult != ERROR_SUCCESS) then
+ 		WriteToLogFile(hMSI, "Unable to unload the agent controller DLL");
+ 		iResult = -1;
+ 	endif;
+ 	return iResult;
+end; 
+
+//////////////////////////////////////////////////////////////////////////////
+// This function shuts down the agent with a challenge and a shared secret
+// Returns 0 if the agent was stopped
+// Returns -1 if the agent failed to stop
+// Returns -2 if any other error occured
+//////////////////////////////////////////////////////////////////////////////
+function int ShutdownAgentWithChallenge(hMSI)
+	WSTRING challenge;
+	WSTRING hash[501];
+	INT hashSize;
+	INT res;
+	INT iResult;
+	INT resultToReturn;
+begin
+	resultToReturn = ERROR_SUCCESS;
+	if (LoadAgentControllerDLL(hMSI) == ERROR_SUCCESS) then
+		//Empties the challenge string
+		challenge = "01234567890123456789012345678901234567890123456789";
+		stopAgentServiceWithChallenge(challenge);
+		hashSize = 500;
+		if (LoadInstallerCommonDLL(hMSI) == ERROR_SUCCESS) then
+			res = hashChallenge (challenge, hash, hashSize);
+			iResult = ERROR_AGENT_NOT_RUNNING;
+			if (StrLength(hash) > 0) then
+				iResult = stopAgentService(hash);
+			endif;
+	 		switch (iResult)
+	 			case ERROR_INCORRECT_PASSWORD:
+	 				//WriteToLogFile(hMSI, "Incorrect password for uninstallation.");
+	 				resultToReturn = -1;
+			 	case ERROR_AGENT_NOT_STOPPED:
+			 		//WriteToLogFile(hMSI, "Error: Agent could not be stopped.");
+			 		resultToReturn = -1;
+			 	case ERROR_AGENT_NOT_RUNNING:
+					//WriteToLogFile(hMSI, "The agent was not running.");
+					SetProperty(hMSI, AGENT_STOPPED_PROP_NAME, "1");
+				default:                                            
+					//WriteToLogFile(hMSI, "Uninstallation password is valid. Agent was stopped.");
+					SetProperty(hMSI, AGENT_STOPPED_PROP_NAME, "1");
+			 endswitch;
+		else
+			//WriteToLogFile(hMSI, "Could not load installer common DLL");
+			resultToReturn = -2;		
+		endif;
+		UnloadInstallerCommonDLL(hMSI);
+		UnloadAgentControllerDLL(hMSI);
+	else
+		//WriteToLogFile(hMSI, "Could not load agent controller DLL");
+		resultToReturn = -2;
+	endif;
+	return resultToReturn;
+end;
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//  FUNCTION:   ValidateIcenetServerLocation
+//
+//  Checks that the icenet server location is valid
+//
+//////////////////////////////////////////////////////////////////////////////
+function INT ValidateIcenetServerLocation(hMSI)
+	WSTRING label;
+	WSTRING errMsg;
+	WSTRING badPortNbErrMsg;
+	INT iResult;
+	WSTRING icenetServerLocation;
+begin
+	 icenetServerLocation = GetProperty(hMSI, ICENET_SERVER_LOCATION_PROP_NAME);
+	 label = @IDS_ICENET_SERVER_LOCATION_LABEL_SHORT;
+	 errMsg = @ERR_INVALID_ICENET_SERVER_LOCATION;
+	 badPortNbErrMsg = @ERR_INVALID_PORT_NUMBER;
+	 iResult = ValidateLocationInput(hMSI, label, icenetServerLocation, errMsg, DEFAULT_WEB_SERVICE_PORT, badPortNbErrMsg, TRUE);
+	 if (iResult == 0) then
+	 	SetProperty(hMSI, ICENET_SERVER_LOCATION_PROP_NAME, icenetServerLocation);
+	 endif;
+	 return ERROR_SUCCESS;
+end;
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           
+// Function:  ValidateUninstallPassword
+//                                                                           
+//  Purpose:  Attempts to shutdown the agent service and displays a UI if necessary.
+//			  This function is used only in the UI sequence.
+//
+//  Returns: 0 if sucessful
+//           1 if password is incorrect
+//           2 if some other fatal error occured
+//                                                                           
+///////////////////////////////////////////////////////////////////////////////
+function INT ValidateUninstallPassword(hMSI)
+	INT returnValue;
+begin
+ 	returnValue = ShutdownAgentService(hMSI);
+ 	switch (returnValue)
+		case ERROR_INCORRECT_PASSWORD:
+			DenyNextDialog(hMSI);
+			ShowModalDialog(hMSI, @IDS_INVALID_UNINSTALL_PASSWORD_TITLE, @IDS_INVALID_UNINSTALL_PASSWORD, SEVERE);
+	 	case ERROR_AGENT_NOT_STOPPED:
+	 		DenyNextDialog(hMSI);
+	 		ShowModalDialog(hMSI, @IDS_ERROR, @IDS_AGENT_SERVICE_DID_NOT_STOP, SEVERE);	 
+		default:                                            
+			AllowNextDialog(hMSI);
+	 endswitch;
+end;
+
+#endif
+#define AGENT_COMMON_IMPL

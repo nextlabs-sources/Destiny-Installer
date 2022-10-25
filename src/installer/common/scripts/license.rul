@@ -1,0 +1,73 @@
+/*
+ * Created on Aug 09, 2006
+ * 
+ * All sources, binaries and HTML pages (C) copyright 2004 by Blue Jungle Inc.,
+ * Redwood City CA, Ownership remains with Blue Jungle Inc, All rights reserved
+ * worldwide.
+ */
+
+#include "..\..\common\scripts\license.h"
+
+////////////////////////////////////////////////////////////////
+// Calculates the default license file location, if necessary.
+////////////////////////////////////////////////////////////////
+function INT PrepareLicenseFileDefaults(hMSI)
+	WSTRING defaultLicenseFileName;
+	WSTRING directory;
+begin
+	
+	if (GetProperty(hMSI, NEED_DEFAULT_LICENSE_LOCATION) == TRUE_VALUE) then
+		//Try with setup.exe first
+		directory = GetProperty(hMSI, "SETUPEXEDIR");
+		if (directory == "") then
+			directory = GetProperty(hMSI, "CURRENTDIRECTORY");
+		endif;
+		if (directory != "") then
+			defaultLicenseFileName = directory ^ "\\license.dat";	
+		else
+			defaultLicenseFileName = "license.dat";	
+		endif;
+		SetProperty(hMSI, LICENSE_FILE_LOCATION_PROPERTY, defaultLicenseFileName);
+		SetProperty(hMSI, NEED_DEFAULT_LICENSE_LOCATION, FALSE_VALUE);
+	endif;
+	return ERROR_SUCCESS;
+end;
+
+///////////////////////////////////////////////////////////
+// Pops up an MFC dialog to select the license file
+///////////////////////////////////////////////////////////
+function INT SelectLicenseFile(hMSI)
+	WSTRING licenseFile;
+begin
+	licenseFile = BrowseForFile(hMSI);
+	SetProperty(hMSI, TEMP_LICENSE_FILE_LOCATION_PROPERTY, licenseFile);
+end;
+
+//////////////////////////////////////////////////////
+// Validates the license file location
+//////////////////////////////////////////////////////
+function INT ValidateLicenseFile(hMSI)
+	WSTRING licenseFile;
+	WSTRING licenseFileDir;
+	WSTRING licenseFileName;
+	NUMBER  licenseFileHandle;
+	WSTRING line;
+	WSTRING dir;
+	INT iResult;
+	WSTRING title;
+	WSTRING intro;
+begin
+	AllowNextDialog(hMSI);
+	licenseFile = GetProperty(hMSI, LICENSE_FILE_LOCATION_PROPERTY);
+	NextlabsStrTrim(hMSI, licenseFile);
+	SetProperty(hMSI, LICENSE_FILE_LOCATION_PROPERTY, licenseFile);
+	OpenFileMode(FILE_MODE_BINARYREADONLY);
+	licenseFileDir = GetFileDirectory(hMSI, licenseFile);
+	licenseFileName = GetFileName(hMSI, licenseFile);
+	iResult = OpenFile(licenseFileHandle, licenseFileDir, licenseFileName);
+	CloseFile(licenseFileHandle);
+	if (iResult < 0 || licenseFileName != "license.dat") then
+		DenyNextDialog(hMSI);
+		ShowModalDialog(hMSI, @ERR_TITLE, @ERR_INVALID_LICENSE_FILE, SEVERE);
+	endif;
+end;

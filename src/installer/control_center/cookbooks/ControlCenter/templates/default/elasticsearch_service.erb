@@ -1,0 +1,17 @@
+[Unit]
+Description=NextLabs ElasticSearch Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+Restart=always
+RestartSec=10
+User=<%= @es_user %>
+Group=<%= @es_group %>
+
+Environment="ES_HOME=<%= @es_home %>"
+Environment="ES_PATH_CONF=<%= @es_home %>/config"
+Environment="JAVA_HOME=<%= @java_home %>"
+Environment="JRE_HOME=<%= @java_home %>"
+
+ExecStart=<%= @es_home %>/bin/elasticsearch -d -p "<%= @es_home %>/data/controlcenteres.pid"

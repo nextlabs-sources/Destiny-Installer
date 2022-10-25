@@ -1,0 +1,166 @@
+/*
+ * Created on Nov 18, 2005
+ * 
+ * All sources, binaries and HTML pages (C) copyright 2004 by Blue Jungle Inc.,
+ * Redwood City CA, Ownership remains with Blue Jungle Inc, All rights reserved
+ * worldwide.
+ */
+
+#include "..\..\common\scripts\platform.h"
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2000 with no service Pack
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2KNoSP(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=500 And ServicePackLevel=0")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;    
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2000 with Service Pack 1
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2KWithSP1(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=500 And ServicePackLevel=1")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2000 with Service Pack 2
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2KWithSP2(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=500 And ServicePackLevel=2")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2000 with Service Pack 3
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2KWithSP3(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=500 And ServicePackLevel=3")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2000 with Service Pack 3
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2KWithSP4(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=500 And ServicePackLevel=4")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;     
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2003 with no service Pack
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2K3NoSP(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=502 And ServicePackLevel=0")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;    
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows 2003 with Service Pack 1
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindows2K3WithSP1(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=502 And ServicePackLevel=1")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows XP with no service Pack
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindowsXPNoSP(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=501 And ServicePackLevel=0")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows XP with Service Pack 1
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindowsXPWithSP1(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=501 And ServicePackLevel=1")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows XP with Service Pack 2
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindowsXPWithSP2(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=501 And ServicePackLevel=2")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the current platform is Windows XP with Service Pack 3 
+////////////////////////////////////////////////////////////////////////////
+function BOOL isWindowsXPWithSP3(hMSI)
+	BOOL result;
+begin
+	if (MSICONDITION_TRUE == MsiEvaluateCondition(hMSI, "VersionNT=501 And ServicePackLevel=3")) then
+		result = TRUE;
+	else
+		result = FALSE;
+	endif;
+	return result;
+end;

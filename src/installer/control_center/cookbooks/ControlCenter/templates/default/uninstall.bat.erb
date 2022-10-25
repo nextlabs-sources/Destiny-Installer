@@ -1,0 +1,10 @@
+@ECHO OFF
+TITLE Control Center Server Uninstaller
+
+set "START_DIR=<%= @uninstaller_dir %>"
+
+IF "%1" == "-s" (
+    call "%START_DIR%/bin/install.bat"
+) ELSE (
+    call "%START_DIR%/bin/install_ui.bat"
+)

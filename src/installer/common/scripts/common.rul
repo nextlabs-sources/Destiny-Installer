@@ -1,0 +1,1474 @@
+#include "..\..\common\scripts\common.h"
+#include "..\..\common\scripts\constants.h"
+#include "..\..\common\scripts\logging.h"
+#ifndef COMMON_IMPL
+
+#define COMBOBOX_INDEX_COLUMN 	2
+#define MAX_RECORD 				20
+
+/*////////////////////////////////////////////////////////////////////////////////
+
+FUNCTION:        AddCboEntry
+
+PARAMETERS:      hView - Handle to the view we want to add this entry to
+                 szProperty - The Installer property associated with the combo box
+                              we want to add to
+                 szText - The text that we want displayed for this entry
+                 szValue - The value we want the above mentioned property set to
+                           if his entry is selected
+                 nIndex - Where in the current list do we want to insert this entry
+
+
+PURPOSE:         create a combo box entry then add it to the view...which will then be
+                 applied to the MSI database
+
+IMPLEMENTATION:  Create an empty record with MsiCreateRecord
+
+                 Populate the record fields with the MsiRecordSet* functions
+
+                 Apply the record to the currently open view with MsiViewModify
+
+////////////////////////////////////////////////////////////////////////////////
+*/
+
+function AddCboEntry(hView, szProperty, szText, szValue, nIndex)
+    NUMBER hRec;
+begin
+    hRec = MsiCreateRecord(4);
+    MsiRecordSetString(hRec,  1, szProperty);
+    MsiRecordSetInteger(hRec, 2, nIndex);
+    MsiRecordSetString(hRec,  3, szValue);
+    MsiRecordSetString(hRec,  4, szText);
+    MsiViewModify(hView, MSIMODIFY_INSERT_TEMPORARY, hRec);
+    MsiCloseHandle(hRec);
+end;
+
+function WSTRING BrowseForFile (hMSI)
+	WSTRING result;
+begin
+	LoadInstallerCommonDLL(hMSI);
+	browseForFiles(result);
+	UnloadInstallerCommonDLL(hMSI);
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Sets the context so that the user can navigate to the next dialog
+////////////////////////////////////////////////////////////////////////////
+function void AllowNextDialog(hMSI)
+begin
+    WriteToLogFile(hMSI,"AllowNextDialog: Set Property to 1");
+	MsiSetProperty(hMSI, CANGOTONEXT_PROP_NAME, "1");
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Function: CopyFileFromBinaryTable 
+// Original Author: Chris Alonzo http://www.installsite.org/pages/en/msi/ca.htm
+// Freeware function
+// Description: Gets a file from the Binary table
+// Parameters:	hMSI(NUMBER) - Handle to the currently running installation 
+//				tableKeyName - Key to be streamed out of the binary table
+//				destinationFile - Full path for extracted file name
+//
+// Returns:	ERROR_ISCRIPT_FAILED if error
+//			ERROR_SUCCESS if success
+////////////////////////////////////////////////////////////////////////////
+function INT CopyFileFromBinaryTable(hMSI, tableKeyName, destinationFile)
+	NUMBER hDatabase;
+	NUMBER hBinaryView;
+	NUMBER hBinaryRecord;
+	NUMBER nResult;
+	NUMBER nBuffer;
+	NUMBER hFile;
+	NUMBER nTotal;
+	NUMBER nBytes;
+	NUMBER nWritten;
+	NUMBER nAttr;  
+	WSTRING destinationFileDir;
+	WSTRING destinationFileName;
+	WSTRING sQuery;
+	WSTRING bStream;
+	BOOL   bOkay;
+begin
+	bOkay = TRUE;
+
+	//Get the handle to the active database. we need this to do view manipulation
+	hDatabase = MsiGetActiveDatabase(hMSI);
+	
+	//Get a view of the binary table based on the SQL Query
+	sQuery = "SELECT * FROM Binary WHERE Name='" + tableKeyName + "'";
+	nResult = MsiDatabaseOpenView(hDatabase, sQuery, hBinaryView);
+	if (nResult != ERROR_SUCCESS) then
+	   return 1; 
+	endif;
+	
+	//MsiViewExecute Needs to to be called for MsiFetchView.
+	//We pass it null because the query above is as granular as we can get
+	//so we do not need to take it further by specifying an additional value.
+	nResult = MsiViewExecute(hBinaryView, NULL);  
+	if (nResult = ERROR_SUCCESS) then
+		//Fetch the view into a record.  We do this because we can only do
+		//streams out of a record and not out of the view.
+		nResult = MsiViewFetch(hBinaryView, hBinaryRecord);
+	endif;
+	
+	//Make sure that the entry was found in the Binary table
+	if (nResult = ERROR_SUCCESS) then
+	
+		//Create the file in that location using the Windows API.
+		OpenFileMode(FILE_MODE_BINARY);
+		destinationFileDir = GetFileDirectory(hMSI, destinationFile);
+		destinationFileName = GetFileName(hMSI, destinationFile);
+		//StrSub(licenseFileName, licenseFile, StrLength(licenseFileDir), StrLength(licenseFile)-StrLength(licenseFileDir));
+		CreateFile(hFile, destinationFileDir, destinationFileName);
+		if (hFile = -1) then
+			nResult = -1;
+		else
+			nTotal = 0; 			
+			nAttr = 0;
+
+			repeat
+				// Read the stream into a buffer, 100000 bytes at a time
+				nBuffer = 100000;
+				nResult = MsiRecordReadStream(hBinaryRecord, 2, bStream, nBuffer);
+
+				if ((nResult = ERROR_SUCCESS) && (nBuffer > 0)) then
+					//Write the buffer to a file. 
+					nResult = WriteBytes(hFile, bStream, 0, nBuffer);
+					
+					if (nResult != 0) then // 0 is bad
+						nTotal = nTotal + nBuffer; // debug only
+					else
+						bOkay = FALSE;
+					endif;
+				elseif (nResult != ERROR_SUCCESS) then
+					bOkay = FALSE;
+				endif; // record record stream
+			until (bOkay = FALSE || (nBuffer = 0));
+		
+			// done copying file
+			CloseFile(hFile);
+			CloseHandle(hFile);
+		endif; // create file
+							 
+		// we only needed one row, so close the view
+		MsiViewClose(hBinaryView);
+														  
+		// done with query
+		MsiCloseHandle(hBinaryRecord);
+	endif; // view fetch 
+
+	// done with binary table
+	MsiCloseHandle(hBinaryView);
+	// done with MSI database
+	MsiCloseHandle(hDatabase);
+
+	if (bOkay = FALSE) then
+	   return 1; 
+	else
+		return ERROR_SUCCESS; 
+	endif;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Sets the context so that the user cannot navigate to the next dialog
+////////////////////////////////////////////////////////////////////////////
+function void DenyNextDialog(hMSI)
+begin
+    WriteToLogFile(hMSI,"DenyNextDialog: Set Property to 0");
+	MsiSetProperty(hMSI, CANGOTONEXT_PROP_NAME, "0");
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Overwrites the reboot property and set if to never reboot.
+// Call this function with caution as the user may want to set this property.
+////////////////////////////////////////////////////////////////////////////
+function INT DisableAutomaticReboot(hMSI)
+begin
+	SetProperty(hMSI, "REBOOT", "ReallySuppress");
+	return ERROR_SUCCESS;
+end;
+
+/////////////////////////////////////////////////////////////////
+// Searches for mgmt servers
+// hMSI : MSI handle
+// szPropertyName : name of the property tied to the mgmt server location
+// processedServerList : list of discovered servers
+/////////////////////////////////////////////////////////////////
+function INT DiscoverIcenetServersLocations(hMSI, szPropertyName, processedServerList)
+    WSTRING commonDLLName;
+    WSTRING dllName;
+    NUMBER hDatabase;
+    NUMBER hCboView;
+    NUMBER index;
+    NUMBER iResult;
+    WSTRING currentServer;
+    WSTRING currentServerDisplayName;
+    LIST   currentServerTokens;
+    WSTRING resultString;
+    INT    resultStringSize;
+    LIST   serverList;
+    WSTRING sQuery;
+    INT iCount;
+begin      
+ //Perform auto-discovery once per install only
+hDatabase = MsiGetActiveDatabase(hMSI);
+sQuery = "SELECT * FROM ComboBox WHERE Property='" + szPropertyName + "'";
+iResult = MsiDatabaseOpenView(hDatabase, sQuery, hCboView);
+resultStringSize = 2000;
+resultString = MakeString(hMSI, resultStringSize);
+if (iResult = ERROR_SUCCESS) then
+	index = GetLastIndex(hCboView, COMBOBOX_INDEX_COLUMN);
+	if (index == 0) then
+		LoadInstallerCommonDLL(hMSI);
+ 		iResult = discoverIcenetServers(resultString, resultStringSize);
+   		UnloadInstallerCommonDLL(hMSI);
+		serverList = ListCreate (STRINGLIST);
+		if (StrGetTokens (serverList, resultString, ",") == 0) then
+			iResult = ListGetFirstString (serverList, currentServer);
+			while (iResult != END_OF_LIST)
+				currentServerTokens = ListCreate(STRINGLIST);
+				if (StrGetTokens (currentServerTokens, currentServer, ";") == 0) then
+					iResult = ListGetFirstString(currentServerTokens, currentServerDisplayName);
+					if (iResult == 0) then
+						ListSetIndex(processedServerList, 0);  
+						if (ListFindString(processedServerList, currentServerDisplayName) == END_OF_LIST) then
+		    				AddCboEntry(hCboView, szPropertyName, currentServerDisplayName, currentServerDisplayName, index);	
+		    				index++;
+		    				ListAddString(processedServerList, currentServerDisplayName, AFTER);
+						endif;
+						ListDestroy(currentServerTokens);
+						iResult = ListGetNextString (serverList, currentServer);
+					endif;
+				endif;
+			endwhile;    	
+		endif;
+		// Remove the list from memory.
+		ListDestroy (serverList);		
+	endif;
+endif;
+MsiViewClose(hCboView);
+return ERROR_SUCCESS;
+end;
+
+/////////////////////////////////////////////////////////////////
+// Searches for mgmt servers
+// hMSI : MSI handle
+// szPropertyName : name of the property tied to the mgmt server location
+// processedServerList : list of discovered servers
+/////////////////////////////////////////////////////////////////
+function INT DiscoverMgmtServersLocations(hMSI, szPropertyName, processedServerList)
+    WSTRING commonDLLName;
+    WSTRING dllName;
+    NUMBER hDatabase;
+    NUMBER hCboView;
+    NUMBER index;
+    NUMBER iResult;
+    WSTRING currentServer;
+    WSTRING currentServerDisplayName;
+    LIST   currentServerTokens;
+    WSTRING resultString;
+    INT    resultStringSize;
+    LIST   serverList;
+    WSTRING sQuery;
+    INT iCount;
+begin      
+ //Perform auto-discovery once per install only
+hDatabase = MsiGetActiveDatabase(hMSI);
+sQuery = "SELECT * FROM ComboBox WHERE Property='" + szPropertyName + "'";
+iResult = MsiDatabaseOpenView(hDatabase, sQuery, hCboView);
+resultStringSize = 2000;
+for iCount = 1 to resultStringSize
+   resultString = resultString + "*"; 
+endfor;
+if (iResult = ERROR_SUCCESS) then
+	index = GetLastIndex(hCboView, COMBOBOX_INDEX_COLUMN);
+	if (index == 0) then
+		LoadInstallerCommonDLL(hMSI);
+ 		iResult = discoverMgmtServers(resultString, resultStringSize);
+   		UnloadInstallerCommonDLL(hMSI);
+		serverList = ListCreate (STRINGLIST);
+		if (StrGetTokens (serverList, resultString, ",") == 0) then
+			iResult = ListGetFirstString (serverList, currentServer);
+			while (iResult != END_OF_LIST)
+				currentServerTokens = ListCreate(STRINGLIST);
+				if (StrGetTokens (currentServerTokens, currentServer, ";") == 0) then
+					iResult = ListGetFirstString(currentServerTokens, currentServerDisplayName);
+					if (iResult == 0) then
+						ListSetIndex (processedServerList, 0);  
+						if (ListFindString(processedServerList, currentServerDisplayName) == END_OF_LIST) then
+		    				AddCboEntry(hCboView, szPropertyName, currentServerDisplayName, currentServerDisplayName, index);	
+		    				index++;
+		    				ListAddString(processedServerList, currentServerDisplayName, AFTER);
+						endif;
+						ListDestroy(currentServerTokens);
+						iResult = ListGetNextString (serverList, currentServer);
+					endif;
+				endif;
+			endwhile;    	
+		endif;
+		// Remove the list from memory.
+		ListDestroy (serverList);		
+	endif;
+endif;
+MsiViewClose(hCboView);
+return ERROR_SUCCESS;
+end;
+
+
+/////////////////////////////////////////////////////////////////
+// Searches for policy servers
+// hMSI : MSI handle
+// szPropertyName : name of the property tied to the policy server location
+// processedServerList : list of policy servers
+/////////////////////////////////////////////////////////////////
+function INT DiscoverPolicyServersLocations(hMSI, szPropertyName, processedServerList)
+    WSTRING commonDLLName;
+    WSTRING dllName;
+    NUMBER hDatabase;
+    NUMBER hCboView;
+    NUMBER index;
+    NUMBER iResult;
+    WSTRING currentServer;
+    WSTRING currentServerDisplayName;
+    LIST   currentServerTokens;
+    WSTRING resultString;
+    INT		resultStringSize;
+    LIST   serverList;
+    WSTRING sQuery;
+    INT iCount;
+begin      
+
+hDatabase = MsiGetActiveDatabase(hMSI);
+sQuery = "SELECT * FROM ComboBox WHERE Property='" + szPropertyName + "'";
+iResult = MsiDatabaseOpenView(hDatabase, sQuery, hCboView);
+resultStringSize = 2000;
+for iCount = 1 to resultStringSize
+   resultString = resultString + "*"; 
+endfor;
+if (iResult = ERROR_SUCCESS) then
+	index = GetLastIndex(hCboView, COMBOBOX_INDEX_COLUMN);
+	if (index == 0) then
+		LoadInstallerCommonDLL(hMSI);
+ 		iResult = discoverPolicyServers(resultString, resultStringSize);
+   		UnloadInstallerCommonDLL(hMSI);
+		serverList = ListCreate (STRINGLIST);
+		if (StrGetTokens (serverList, resultString, ",") == 0) then
+			iResult = ListGetFirstString (serverList, currentServer);
+			while (iResult != END_OF_LIST)
+				ListSetIndex (processedServerList, 0);  
+				if (ListFindString(processedServerList, currentServer) == END_OF_LIST) then
+		  			AddCboEntry(hCboView, szPropertyName, currentServer, currentServer, index);	
+		    		index++;
+		    		ListAddString(processedServerList, currentServer, AFTER);
+				endif;
+			iResult = ListGetNextString (serverList, currentServer);				
+			endwhile;    	
+		endif;
+		// Remove the list from memory.
+		ListDestroy (serverList);		
+	endif;
+endif;
+MsiViewClose(hCboView);
+return ERROR_SUCCESS;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Deletes all the files in a directory
+// hMSI : MSI handle
+// directoryName : name of the directory to delete
+// bRecursive : set to TRUE to process sub-directories
+// return ERROR_SUCCESS if succeeded, error code otherwise
+////////////////////////////////////////////////////////////////////////////
+function INT EmptyDirectory(hMSI, directoryName, bRecursive)
+	INT iResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = emptyDirectory(directoryName, bRecursive);
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+             
+             
+////////////////////////////////////////////////////////////////////////////
+// Deletes all the files in a directory in a deferred context
+// hMSI : MSI handle
+// directoryName : name of the directory to delete
+// bRecursive : set to TRUE to process sub-directories
+// return ERROR_SUCCESS if succeeded, error code otherwise
+////////////////////////////////////////////////////////////////////////////
+function INT DeferredEmptyDirectory(hMSI, directoryName, bRecursive)
+	INT iResult;
+begin
+   DeferredLoadInstallerCommonDLL(hMSI);
+   iResult = emptyDirectory(directoryName, bRecursive);
+   DeferredUnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the first port # available on or after the start port #.
+// hMSI : MSI handle
+// startPort : first port to try
+////////////////////////////////////////////////////////////////////////////
+function INT FindAvailablePort (hMSI, startPort)
+	INT iResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = findAvailablePort(startPort);
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the name of domain where the installer is currently running.
+// windowsName : true if the windows domain name is used (e.g. BLUEJUNGLE)
+//               false if the DNS domain name is used (e.g bluejungle.com)
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentDomainName(hMSI, windowsName)
+	WSTRING result;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   getDomainName(result, windowsName);
+   UnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the name of the primary domain controller for the machine domain.
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentDomainPDC(hMSI)
+	WSTRING result;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   findDomainControllers(result);
+   UnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;  
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the name of the machine where the installer is currently running.
+// bIncludeDomainName : set to TRUE to include domain name (e.g machine.domain.com)
+//					  : set to FALSE to ignore domain name (e.g machine)
+////////////////////////////////////////////////////////////////////////////
+function WSTRING DeferredGetCurrentHostName(hMSI, bIncludeDomainName)
+	WSTRING currentHostName;       
+	WSTRING currentDomainName;
+	WSTRING result;   
+	INT domainNameResult;
+	BOOL windowsName;
+begin
+	windowsName = FALSE;
+	currentHostName = DeferredGetProperty(hMSI, "ComputerName");    
+  	result = currentHostName;
+  	if (bIncludeDomainName == TRUE) then
+  		DeferredLoadInstallerCommonDLL(hMSI);
+   		domainNameResult = getDomainName(currentDomainName, windowsName);
+   		DeferredUnloadInstallerCommonDLL(hMSI);    
+		if (domainNameResult == ERROR_SUCCESS) then
+			result = currentHostName + "." + currentDomainName;		
+		endif;
+	endif;
+	return result;
+end;   
+
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the name of the machine where the installer is currently running.
+// bIncludeDomainName : set to TRUE to include domain name (e.g machine.domain.com)
+//					  : set to FALSE to ignore domain name (e.g machine)
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentHostName(hMSI, bIncludeDomainName)
+	WSTRING currentHostName;       
+	WSTRING currentDomainName;
+	WSTRING result;   
+	INT domainNameResult;
+	BOOL windowsName;
+begin
+	windowsName = FALSE;
+	currentHostName = GetProperty(hMSI, "ComputerName");    
+  	result = currentHostName;
+  	if (bIncludeDomainName == TRUE) then 
+  		LoadInstallerCommonDLL(hMSI);     
+   		domainNameResult = getDomainName(currentDomainName, windowsName);    
+   		UnloadInstallerCommonDLL(hMSI);                        
+		if (domainNameResult == ERROR_SUCCESS) then
+			result = currentHostName + "." + currentDomainName;		
+		endif;
+	endif;
+	return result;
+end;   
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the name of the primary domain controller for the machine domain.
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentHostSid(hMSI)
+	WSTRING result;
+	WSTRING hostName;
+begin             
+   hostName = GetCurrentHostName(hMSI, FALSE);
+   LoadInstallerCommonDLL(hMSI);
+   getHostSID(hostName, result);
+   UnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+
+///////////////////////////////////////////////////////////////////////////
+// Returns the current user display name
+///////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentUserDisplayName(hMSI)
+	WSTRING displayName;
+	INT displayNameSize;
+begin
+	displayNameSize = 300;
+	displayName = MakeString(hMSI, displayNameSize);
+	LoadInstallerCommonDLL(hMSI);
+	getCurrentUserDisplayName(displayName, displayNameSize);
+	UnloadInstallerCommonDLL(hMSI);   
+	return displayName;
+end;
+
+///////////////////////////////////////////////////////////////////////////
+// Returns the current user first name
+///////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentUserFirstName(hMSI)
+	WSTRING firstName;
+	INT firstNameSize;
+begin
+	firstNameSize = 300;
+	firstName = MakeString(hMSI, firstNameSize);
+	LoadInstallerCommonDLL(hMSI);
+	getCurrentUserFirstName(firstName, firstNameSize);
+	UnloadInstallerCommonDLL(hMSI);   
+	return firstName;
+end;
+
+///////////////////////////////////////////////////////////////////////////
+// Returns the current user last name
+///////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentUserLastName(hMSI)
+	WSTRING lastName;
+	INT lastNameSize;
+begin
+	lastNameSize = 300;
+	lastName = MakeString(hMSI, lastNameSize);
+	LoadInstallerCommonDLL(hMSI);
+	getCurrentUserLastName(lastName, lastNameSize);
+	UnloadInstallerCommonDLL(hMSI);   
+	return lastName;
+end;
+
+///////////////////////////////////////////////////////////////////////////
+// Returns the current user login name
+///////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentUserLoginName(hMSI)
+	WSTRING loginName;
+	INT loginNameSize;
+begin
+	loginNameSize = 300;
+	loginName = MakeString(hMSI, loginNameSize);
+	LoadInstallerCommonDLL(hMSI);
+	getCurrentUserLoginName(loginName, loginNameSize);
+	UnloadInstallerCommonDLL(hMSI);   
+	return loginName;
+end;
+
+///////////////////////////////////////////////////////////////////////////
+// Returns the current user principal name
+///////////////////////////////////////////////////////////////////////////
+function WSTRING GetCurrentUserPrincipalName(hMSI)
+	WSTRING principalName;
+	INT principalNameSize;
+begin
+	principalNameSize = 300;
+	principalName = MakeString(hMSI, principalNameSize);
+	LoadInstallerCommonDLL(hMSI);
+	getCurrentUserPrincipalName(principalName, principalNameSize);
+	UnloadInstallerCommonDLL(hMSI);   
+	return principalName;
+end;
+	
+/////////////////////////////////////////////////////////////
+// Returns the name of the directory where a file is located.
+// This function returns the trailing slash as well
+// filename : name of the file to use
+// returns : the directory name for this file
+/////////////////////////////////////////////////////////////
+function WSTRING GetFileDirectory(hMSI, fileName)
+	WSTRING result;
+	WSTRING temp;
+	LIST   tokenList;
+	INT i;
+	INT size;
+begin
+	result = fileName;
+    tokenList = ListCreate (STRINGLIST);
+    if (StrGetTokens (tokenList, fileName, "\\") == 0) then
+    	size = ListCount (tokenList);
+    	ListGetFirstString(tokenList, temp);
+    	if (StrLength(temp) == 0) then
+    		temp = "\\";
+    	endif;
+    	result = temp + "\\";
+    	for i = 1 to (size-2)
+    		ListGetNextString(tokenList, temp);
+    		result = result + temp + "\\";
+    	endfor;
+    endif;
+    ListDestroy(tokenList);
+    return result;
+end;
+
+/////////////////////////////////////////////////////////////
+// Returns the name of the file from its full file location
+// filename : name of the file to use
+// returns : The file name, without the directory
+/////////////////////////////////////////////////////////////
+function WSTRING GetFileName(hMSI, fileName)
+	WSTRING result;
+	WSTRING dirName;
+begin
+	result = fileName;
+	dirName = GetFileDirectory(hMSI, fileName);
+	StrSub(result, fileName, StrLength(dirName), StrLength(fileName)-StrLength(dirName));
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the installation directory, without the trailing slash
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetInstallationDirNoSlash(hMSI)
+	WSTRING result;
+begin
+	result = INSTALLDIR;
+	StrRemoveLastSlash(result);
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the host name from an host expression
+// For example, MACHINE1:5432 will return MACHINE1
+////////////////////////////////////////////////////////////////////////////
+function WSTRING DeferredGetHostName(hMSI, hostExpression)
+	WSTRING result;
+	INT iResult;
+begin
+   //Gives the correct length to the string
+   result = hostExpression;
+   DeferredLoadInstallerCommonDLL(hMSI);
+   iResult = getHostName(hostExpression, result);
+   DeferredUnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+
+
+function WSTRING GetHostName(hMSI, hostExpression)
+	WSTRING result;
+	INT iResult;
+begin
+   //Gives the correct length to the string
+   result = hostExpression;
+   LoadInstallerCommonDLL(hMSI);
+   iResult = getHostName(hostExpression, result);
+   UnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+
+////////////////////////////////////////////////////////////////////////////////
+/*
+FUNCTION:        GetLastIndex
+
+PARAMETERS:      hView - Handle to the view we want to get the last index of
+                 nPosIndex - The column position of the index field.  Without this,
+                 	we would not know what column to look into for the index info.
+
+PURPOSE:         If a combo box already has records associated with it this function
+				 will return the index of the last record.  Otherwise it will
+				 return zero.
+
+IMPLEMENTATION:  Execute the view to get a workable object
+
+                 Fetch all items out of the view until the last one is found
+
+                 For each item in the view, compare its index against nIndex, which
+                 stores the greatest index.
+////////////////////////////////////////////////////////////////////////////////
+*/
+function NUMBER GetLastIndex(hView,nPosIndex)
+    NUMBER iResult, nTemp, nIndex, hRec, nCols;
+begin
+    iResult = MsiViewExecute(hView, NULL);
+    nCols = GetNumCols(hView);
+    hRec = MsiCreateRecord(nCols);
+
+    nIndex = 0;
+
+    while (MsiViewFetch(hView,hRec) != ERROR_NO_MORE_ITEMS)
+        nTemp = MsiRecordGetInteger(hRec, nPosIndex);
+        if (nTemp > nIndex) then
+       	nIndex = nTemp;
+        endif;
+    endwhile;
+
+    MsiCloseHandle(hRec);
+    return nIndex;
+end;                              
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the domain name of a user. For example BLUEJUNGLE\ihanen will 
+// return BLUEJUNGLE for the domain name and ihanen for the username.
+// This function also support the user@domain format.
+////////////////////////////////////////////////////////////////////////////
+function INT GetLoginDetails(loginExpression, domainName, userName)
+	INT iResult;
+	LIST tokenList;
+	WSTRING tokenToSearch;
+begin
+	tokenList = ListCreate(STRINGLIST);
+	if (StrFind(loginExpression, "\\") > 0) then
+		iResult = StrGetTokens(tokenList, loginExpression, "\\");
+		if (iResult == ERROR_SUCCESS) then
+			iResult = ListGetFirstString(tokenList, domainName);
+			if (iResult == ERROR_SUCCESS) then
+				iResult = ListGetNextString(tokenList, userName);
+			endif;
+		endif;
+	else
+		iResult = StrGetTokens(tokenList, loginExpression, "@");
+		if (iResult == ERROR_SUCCESS) then
+			iResult = ListGetFirstString(tokenList, userName);
+			if (iResult == ERROR_SUCCESS) then
+				iResult = ListGetNextString(tokenList, domainName);
+			endif;
+		endif;
+	endif;
+	ListDestroy(tokenList);
+	return iResult;
+end;
+
+
+/*////////////////////////////////////////////////////////////////////////////////
+
+FUNCTION:        GetNumCols
+
+PARAMETERS:      hView - The view that we want to get the size of
+
+PURPOSE:         Return the number of columns available in a specified view
+
+IMPLEMENTATION:  Create a large record, then use MsiGetColumnInfo to get the
+			Column headers of the specified view.
+
+			Iterate through the retireved column headers until an empty header
+			is encountered, this tells us that the previous header was the last
+			one.  From this, we can determine the size of the record needed to
+			fetch data from this view.
+
+////////////////////////////////////////////////////////////////////////////////
+*/
+function NUMBER GetNumCols(hView)
+    NUMBER iResult, hRec, nRecVal, nColCtr;
+begin
+  // create a large record
+  hRec = MsiCreateRecord(MAX_RECORD);
+
+  // retrieve the column information for the view into our large record
+  iResult =  MsiViewGetColumnInfo(hView, MSICOLINFO_NAMES, hRec);
+
+  nRecVal = 1;
+  nColCtr = 0;
+
+  // iterate until an empty header is found.
+  while (nRecVal != 0)
+       nColCtr = nColCtr + 1;
+       nRecVal = MsiRecordDataSize(hRec, nColCtr);
+  endwhile;
+
+  MsiCloseHandle(hRec);
+
+  // the above while loop terminates on the first empty column, so we
+  // subtract one to get the record size.
+  return (nColCtr - 1);
+end;
+
+function INT DeferredGetPortNumber(hMSI, hostExpression, defaultValue)
+	INT result;
+begin
+   DeferredLoadInstallerCommonDLL(hMSI);
+   result = getPortNumber(hostExpression, defaultValue);
+   DeferredUnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the port number from an host expression
+// For example, MACHINE1:5432 will return 5432
+// hostExpression : host expression to parse
+// defaultValue : default port value if no port is specified
+////////////////////////////////////////////////////////////////////////////
+function INT GetPortNumber(hMSI, hostExpression, defaultValue)
+	INT result;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   result = getPortNumber(hostExpression, defaultValue);
+   UnloadInstallerCommonDLL(hMSI);               
+   return result;
+end;
+////////////////////////////////////////////////////////////////////////////
+// Returns the value of a given MSI property
+////////////////////////////////////////////////////////////////////////////
+function WSTRING DeferredGetProperty(hMSI, propName)
+	NUMBER bufSize;
+	WSTRING result;
+begin
+	result = "";
+	result=MsiGetCustomActionDataAttribute(hMSI, propName);  
+	WriteToLogFile(hMSI, "DeferredGetProperty():Property: " + propName + 
+	               " value: " + result);
+	return result;
+end;    
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns the value of a given MSI property
+////////////////////////////////////////////////////////////////////////////
+function WSTRING GetProperty(hMSI, propName)
+	NUMBER bufSize;
+	WSTRING result;
+begin
+	result = "";
+	MsiGetProperty(hMSI, "SUPPORTDIR", result, bufSize);
+	if(result != "") then
+	   result = "";  
+	   MsiGetProperty(hMSI, propName, result, bufSize);  
+	   WriteToLogFile(hMSI, "GetProperty():Property: " + propName + 
+	               " value: " + result);
+	else     
+	   result=DeferredGetProperty(hMSI, propName);
+	endif;
+	return result;
+end;    
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the character is a letter, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsLetter(charToTest)
+	WSTRING strToTest;
+begin
+	strToTest[0] = charToTest;
+	return ((StrCompare("A", strToTest) <= 0) && (StrCompare("Z", strToTest) >= 0));
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the character is a digit, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsDigit(charToTest)
+	NUMBER num;
+	WSTRING strToTest;
+begin 
+	strToTest[0] = charToTest;
+	return (StrToNum(num, strToTest) == 0);
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if the character is a letter, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsSpecialChar(charToTest)
+begin
+	return (!IsDigit(charToTest) && !IsLetter(charToTest) && charToTest != 0);
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is the first installation, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL ImmediateIsFirstInstallation(hMSI)
+	WSTRING value;
+	NUMBER bufSize;
+	BOOL result;
+begin           
+    value = "";
+    bufSize = 256;
+	result = FALSE;
+	MsiGetProperty(hMSI, "Installed", value, bufSize); 
+	if (value == "") then
+		result = TRUE;
+    endif;       
+    return result;
+end; 
+
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is the first installation, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsFirstInstallation(hMSI)
+	WSTRING value;
+	NUMBER bufSize;
+	BOOL result;
+begin           
+    value = "";
+    bufSize = 256;
+	result = FALSE;
+	value=MsiGetCustomActionDataAttribute(hMSI, "Installed"); 
+	if (value == "") then
+		result = TRUE;
+    endif;       
+    return result;
+end; 
+   
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is a major upgrade, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsMajorUpgrade(hMSI)
+	WSTRING value;
+	NUMBER bufSize;
+	BOOL result;
+begin           
+    value = "";
+    bufSize = 256;
+	result = FALSE;
+	value=GetProperty(hMSI, "IS_MAJOR_UPGRADE"); 
+	if (value != "") then
+		result = TRUE;
+    endif;      
+   	WriteToLogFile(hMSI, "In function IsMajorUpgrade, value of IS_MAJOR_UPGRADE: "
+   	               + value); 
+    return result;
+end; 
+   
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is a silent installation, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsSilentInstallation(hMSI)
+	WSTRING uiLevel;
+begin
+	uiLevel = GetProperty(hMSI, "UILevel");
+	return (uiLevel == "2");
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is a full uninstall, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL ImmediateIsFullUninstallation(hMSI)
+	WSTRING value;
+	NUMBER bufSize;
+	BOOL result;
+begin     
+	result = FALSE;
+	MsiGetProperty(hMSI, "REMOVE", value, bufSize);
+	if (value == "ALL") then
+		result = TRUE;
+    endif;
+    return result;
+end; 
+     
+// Called from Deferred state.  Returns true if this is a full uninstall, false otherwise.
+function BOOL DeferredIsFullUninstallation(hMSI)
+	WSTRING value;
+begin     
+	value = DeferredGetProperty(hMSI, "REMOVE");	
+	if (value == "ALL") then
+		return TRUE;
+	else
+		return FALSE;	
+    endif;
+end; 
+
+////////////////////////////////////////////////////////////////////////////
+// Returns true if this is a full uninstall, false otherwise
+////////////////////////////////////////////////////////////////////////////
+function BOOL IsFullUninstallation(hMSI)
+	WSTRING value;
+	NUMBER bufSize;
+	BOOL result;
+begin     
+	result = FALSE;
+	value=MsiGetCustomActionDataAttribute(hMSI, "REMOVE");
+	if (value == "ALL") then
+		result = TRUE;
+    endif;
+    return result;
+end; 
+
+
+
+////////////////////////////////////////////////////////////////////////////
+// Loads the common DLL for the installer
+////////////////////////////////////////////////////////////////////////////
+function int DeferredLoadInstallerCommonDLL(hMSI)
+	WSTRING commonDLLName;
+	int iResult;        
+	string supportDir;
+begin              
+
+     supportDir=MsiGetCustomActionDataAttribute(hMSI,"supportDir");
+	 commonDLLName = supportDir ^ INSTALLER_COMMON_DLL_NAME;
+	 WriteToLogFile (hMSI, "Try to load DLL: [" + commonDLLName + "]");
+	 iResult = UseDLL(commonDLLName);
+
+	 if (iResult < 0) then  
+	 	WriteToLogFile (hMSI, "ERROR: Loading DLL failed: " + FormatMessage(iResult));
+	 endif;
+	 return iResult;
+end; 
+
+
+////////////////////////////////////////////////////////////////////////////
+// Loads the common DLL for the installer
+// Can be invoked from both immediate and deferred states
+function int LoadInstallerCommonDLL(hMSI)
+	WSTRING commonDLLName;
+	int iResult;
+	string supportDir;     
+	NUMBER bufSize;
+begin
+    supportDir=GetProperty(hMSI,"SUPPORTDIR");                                                    
+ 	if(supportDir == "") then    
+ 		WriteToLogFile(hMSI, "Got empty SUPPORTDIR.  Will try deferred state.");
+		MsiGetProperty(hMSI, "SUPPORTDIR", supportDir, bufSize);  
+		WriteToLogFile(hMSI, "Got deferred SUPPORTDIR: " + supportDir);
+	endif;
+     
+	 commonDLLName = supportDir ^ INSTALLER_COMMON_DLL_NAME;    
+	 WriteToLogFile(hMSI, "Common DLL to be loaded: " + commonDLLName);
+	 
+	 iResult = UseDLL(commonDLLName);
+	 if (iResult < 0) then  
+	 	WriteToLogFile (hMSI, "ERROR: Loading DLL failed: " + FormatMessage(iResult));
+	 endif;
+	 return iResult;
+end; 
+
+/////////////////////////////////////////////////////////////////////////////
+// Returns a string of the specified length. 
+// The string is filled with '*' characters  
+// hMSI : MSI context
+// stringSize : size of the string to return
+/////////////////////////////////////////////////////////////////////////////
+function WSTRING MakeString(hMSI, stringSize)
+	INT currentIndex;
+	WSTRING resultString;
+begin
+	for currentIndex = 1 to stringSize
+	   resultString = resultString + "*"; 
+	endfor;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Unloads the common DLL for the installer
+////////////////////////////////////////////////////////////////////////////
+function int DeferredUnloadInstallerCommonDLL(hMSI)
+	WSTRING commonDLLName;
+	int iResult;   
+	string supportDir;
+begin
+	 supportDir=MsiGetCustomActionDataAttribute(hMSI,"supportDir");
+	 commonDLLName = supportDir ^ INSTALLER_COMMON_DLL_NAME;
+	 iResult = UnUseDLL(commonDLLName);
+	 if (iResult < 0) then  
+	 	WriteToLogFile (hMSI, "ERROR: Loading DLL failed: " + FormatMessage(iResult));
+	 endif;
+	 return iResult;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Unloads the common DLL for the installer
+////////////////////////////////////////////////////////////////////////////
+function int UnloadInstallerCommonDLL(hMSI)
+	WSTRING commonDLLName;
+	int iResult;
+	string supportDir;
+begin  
+     supportDir= GetProperty(hMSI,"SUPPORTDIR");
+	 commonDLLName = supportDir ^ INSTALLER_COMMON_DLL_NAME;
+	 iResult = UnUseDLL(commonDLLName);
+	 if (iResult < 0) then  
+	 	WriteToLogFile (hMSI, "ERROR: Loading DLL failed: " + FormatMessage(iResult));
+	 endif;
+	 return iResult;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Displays a modal dialog
+// szMessage : message to display
+// szTitle : title to display
+// nType : type dialog
+////////////////////////////////////////////////////////////////////////////
+function INT ShowModalDialog(hMSI, szTitle, szMessage, nType)
+	INT iResult; 
+	INT modalType;
+begin
+	iResult = LoadInstallerCommonDLL(hMSI);
+	if (iResult == ERROR_SUCCESS) then
+		switch (nType)
+			case SEVERE:
+				modalType = 0;
+			case WARNING:
+				modalType = 1;
+			case INFORMATION:
+				modalType = 2;
+			default:
+				modalType = 2;
+		endswitch;
+		iResult = installercommon.showModalMessage(szTitle, szMessage, modalType);
+	endif;
+	UnloadInstallerCommonDLL(hMSI);  
+	return iResult;
+end;
+
+
+////////////////////////////////////////////////////////////////////////////
+// Displays a yes/no dialog, with a warning sign
+// szMessage : message to display
+// szTitle : title to display
+// Return : 1 if user clicked yes, 2 if the user clicked no
+////////////////////////////////////////////////////////////////////////////
+function INT ShowYesNoDialog(hMSI, szTitle, szMessage)
+	INT iResult; 
+begin
+	iResult = LoadInstallerCommonDLL(hMSI);
+	if (iResult == ERROR_SUCCESS) then
+		iResult = installercommon.showYesNoDialog(szTitle, szMessage);
+	endif;
+	UnloadInstallerCommonDLL(hMSI);  
+	return iResult;
+end;
+
+
+////////////////////////////////////////////////////////////////
+// Replaces all occurence of one WSTRING to another within a file
+// hMSI : MSI handle
+// fileName : name of the file to process
+// token : token to replace
+// value : replacement value
+// secret : true to log "*****" instead of the value in the log file
+////////////////////////////////////////////////////////////////
+function INT ImmediateReplaceInFile(hMSI, fileName, token, value, secret)
+	INT result;
+begin
+	result = LoadInstallerCommonDLL(hMSI);
+	if (result == ERROR_SUCCESS) then
+		result = replaceInFile(fileName, token, value);
+	endif;
+	if (result == ERROR_SUCCESS) then
+		 if (secret == FALSE) then
+		 	WriteToLogFile (hMSI, "Replaced '" + token + "' with '" + value + "' in file '" + fileName);
+		 else
+		 	WriteToLogFile (hMSI, "Replaced '" + token + "' with '**************' in file '" + fileName);
+		 endif;
+	endif;
+	UnloadInstallerCommonDLL(hMSI);
+	return result;
+end;
+
+////////////////////////////////////////////////////////////////
+// Replaces all occurence of one WSTRING to another within a file
+// hMSI : MSI handle
+// fileName : name of the file to process
+// token : token to replace
+// value : replacement value
+// secret : true to log "*****" instead of the value in the log file
+////////////////////////////////////////////////////////////////
+function INT ReplaceInFile(hMSI, fileName, token, value, secret)
+	INT result;
+begin
+	result = DeferredLoadInstallerCommonDLL(hMSI);
+	if (result == ERROR_SUCCESS) then
+		result = replaceInFile(fileName, token, value);  
+	else
+		WriteToLogFile (hMSI, "ReplaceInFile: InstallerCommmonDLL load failed");
+	endif;
+	if (result == ERROR_SUCCESS) then
+		 if (secret == FALSE) then
+		 	WriteToLogFile (hMSI, "Replaced '" + token + "' with '" + value + "' in file '" + fileName);
+		 else
+		 	WriteToLogFile (hMSI, "Replaced '" + token + "' with '**************' in file '" + fileName);
+		 endif;
+	endif;
+	DeferredUnloadInstallerCommonDLL(hMSI);
+	return result;
+end;
+
+/////////////////////////////////////////////////////////////////
+// Sets a property value
+// hMSI : MSI handle
+// propName : property name
+// propValue : property value
+/////////////////////////////////////////////////////////////////
+function INT SetProperty (hMSI, propName, propValue)
+begin
+	MsiSetProperty(hMSI, propName, propValue);
+	return ERROR_SUCCESS;
+end;
+
+#endif
+
+//////////////////////////////////////////////////////////////
+// Trims spaces in front and behind a string                  
+// hMSI : MSI handle
+// stringToTrim : string to be trimmed
+//////////////////////////////////////////////////////////////
+function INT NextlabsStrTrim(hMSI, stringToTrim)
+	WSTRING result;
+begin
+	
+	if (StrLength(stringToTrim) == 0) then
+		//Nothing to trim, it is empty!
+		return ERROR_SUCCESS;
+	endif;
+	
+	//Trim heading spaces, if any
+	while (StrFind(stringToTrim, " ") == 0)
+		StrSub(result, stringToTrim, 1, StrLength(stringToTrim)-1);
+		stringToTrim = result;
+	endwhile;
+	
+	//Trim tail spaces, if any
+	while (stringToTrim[StrLength(stringToTrim) -1] == " ")
+		StrSub(result, stringToTrim, 0, StrLength(stringToTrim)-1);
+		stringToTrim = result;
+	endwhile;
+end;
+
+//////////////////////////////////////////////////////////////
+// Validates that the chosen port number is free
+// port : port number to check
+// error message to display if the port is already taken      
+//////////////////////////////////////////////////////////////
+function INT ValidateFreePortNumber (hMSI, sPort, errMsg)
+	INT iInput;
+	INT iResult;
+	INT port;
+	WSTRING webAppPortErrMsg;
+begin
+	AllowNextDialog(hMSI);
+	StrToNum(port, sPort);
+	iResult = LoadInstallerCommonDLL(hMSI);
+	if (iResult == ERROR_SUCCESS) then
+		iResult = validateAvailablePort(port);    
+		if (iResult != ERROR_SUCCESS) then
+			DenyNextDialog(hMSI);
+			ShowModalDialog(hMSI, @ERR_TITLE, errMsg, SEVERE);
+		endif;
+	endif;
+	UnloadInstallerCommonDLL(hMSI);
+	return iResult;	
+end;
+
+///////////////////////////////////////////////////////////////////////////////////////////
+// Validates LDAP connection settings
+// hostname : host of the LDAP server
+// port : porf of the LDAP server
+// userName : user login
+// password : user password
+// domainName : name of user domain
+// errMsg : error message (if any) returned upon failed connection
+// Returns : 0 if validation passes, error code otherwise
+function INT ValidateLDAPConnection(hMSI, hostName, port, userName, password, baseDN, domainName, errMsg)
+	INT iResult;
+begin 
+	iResult = LoadInstallerCommonDLL(hMSI);
+	if (iResult == ERROR_SUCCESS) then
+		iResult = testLDAPConnection(hostName, port, userName, password, baseDN, domainName, errMsg);
+	endif;
+	UnloadInstallerCommonDLL(hMSI);
+	return iResult;
+end;
+
+/////////////////////////////////////////////////////////////////
+// Checks whether a location input is valid
+// hMSI : MSI handle
+// labelName : value of the input label
+// inputValue : current input value 
+// errMsg : to display in case of error
+// defaultPort : default port number if no port number specified in the input
+// portNumberErrMsg : error message to display if port number is incorrect
+// required : true of the input is required, false otherwise
+/////////////////////////////////////////////////////////////////
+function INT ValidateLocationInput (hMSI, labelName, inputValue, errMsg, defaultPort, portNumberErrMsg, required)
+	INT iPort;
+	INT iResult;
+	WSTRING sPort;
+begin
+	//If not required and empty, validation is fine
+	if (StrLength(inputValue) == 0 && required == FALSE) then
+		return ERROR_SUCCESS;
+	endif;                
+	iPort = GetPortNumber(hMSI, inputValue, defaultPort);
+	NumToStr(sPort, iPort);
+	iResult = ValidatePortNumber (hMSI, sPort, portNumberErrMsg);
+	if (iResult == ERROR_SUCCESS) then
+		DenyNextDialog(hMSI);
+		LoadInstallerCommonDLL(hMSI);
+		iResult = validateLocationInput (labelName, inputValue, errMsg, defaultPort, required);
+		UnloadInstallerCommonDLL(hMSI);
+	endif;
+	if (iResult == 0) then
+		AllowNextDialog(hMSI);
+	endif;
+	return iResult;
+end;
+
+/////////////////////////////////////////////////////
+// Validates a password input
+// validation is based on 
+// - minimum length (8 chars minimum)
+// - at least one digit (?)
+// - at least one special character (?)
+/////////////////////////////////////////////////////
+function BOOL ValidatePassword (password)
+	BOOL result;
+	BOOL letterFound;
+	BOOL numberFound;
+	BOOL specialCharFound;
+	INT i;
+	INT len;       
+	CHAR currentChar;
+begin
+	letterFound = FALSE;
+	numberFound = FALSE; 
+	specialCharFound = FALSE;
+	len = StrLength(password);
+	result = (len >= 8) && (StrFind(password, " ") < 0);
+	if (result == TRUE) then
+		for i=0 to len
+			currentChar = password[i];
+			if (IsLetter(currentChar)) then
+				letterFound = TRUE;
+			elseif (IsDigit(currentChar)) then
+				numberFound = TRUE;
+			elseif (IsSpecialChar(currentChar)) then
+				specialCharFound = TRUE;
+			endif;
+		endfor;
+		result = (letterFound && numberFound && specialCharFound);
+	endif; 
+	return result;
+end;
+	
+////////////////////////////////////////////////////	
+// Validates user input for a password and a confirm
+// password.
+// Returns 0 of validation passes
+// 1 if passwords do not match
+// 2 if password is not strong enough
+// password : password
+// password2 : confirm password
+////////////////////////////////////////////////////
+function INT ValidatePasswords (password, password2)
+begin
+	if (StrCompare(password, password2) != 0) then
+		return 1;
+	endif;
+	
+	if (ValidatePassword(password) == TRUE) then
+		return 0;
+	endif;
+	return 2;
+end;
+
+/////////////////////////////////////////////////////////////////
+// Validates if the value of a port number is correct
+// hMSI : MSI handle
+// inputValue : current input value
+// errMsg : error message to display if port is invalid
+/////////////////////////////////////////////////////////////////
+function INT ValidatePortNumber (hMSI, inputValue, errMsg)
+	INT iInput;
+	INT iResult;
+	WSTRING webAppPortErrMsg;
+begin
+	DenyNextDialog(hMSI);    
+	iResult = StrToNum(iInput, inputValue);
+	if (iResult == 0) then
+		if (iInput < 1 || iInput > 65535) then
+			iResult = -1;
+		endif;	
+	endif;
+	if (iResult == 0) then
+		AllowNextDialog(hMSI);
+	else
+		ShowModalDialog(hMSI, @ERR_TITLE, errMsg, SEVERE);
+	endif;
+	return iResult;	
+end;
+
+/////////////////////////////////////////////////////////////////
+// Validates a username / password to logon as a service
+// username : full username (e.g. STBARTS\iannis)
+// password : password
+// Returns : true if validation passes, false otherwise
+function BOOL IsValidWindowsServiceUser(hMSI, username, password)
+	BOOL result;
+	LIST tokenList;
+	WSTRING domainName;
+	WSTRING login;
+	INT iResult;
+begin
+	result = FALSE;
+	tokenList = ListCreate (STRINGLIST);
+	//Extract domain name from username
+	if (StrGetTokens (tokenList, username, "\\") == 0) then
+		ListGetFirstString(tokenList, domainName);
+		ListGetNextString(tokenList, login);
+		LoadInstallerCommonDLL(hMSI);
+		iResult = validateServiceAccount(login, domainName, password);
+		if (iResult == ERROR_SUCCESS) then
+			result = TRUE;
+		endif;
+		UnloadInstallerCommonDLL(hMSI);
+	endif;
+	return result;
+end;
+
+/////////////////////////////////////////////////////////////////
+// creates a windows service account name
+function INT CreateWindowsServiceAccount(hMSI)
+	WSTRING login;
+	WSTRING description;
+	WSTRING actualLogin;
+	WSTRING generatedPassword;
+	INT result;      
+begin
+	login = "ceuser";
+	description = "Compliant Enterprise User";
+	LoadInstallerCommonDLL(hMSI);
+	result = autoCreateServiceUser(login, description, actualLogin, generatedPassword);
+	UnloadInstallerCommonDLL(hMSI); 
+	SetProperty(hMSI, "WINDOWS_SERVICE_USERNAME", actualLogin);
+	SetProperty(hMSI, "WINDOWS_SERVICE_PASSWORD", generatedPassword);
+	return result;
+end;        
+
+/////////////////////////////////////////////////////////////////
+// deletes a windows service account name
+// hMSI [in] : MSI context
+// serviceAccount [in] : Name of the account to delete
+// Returns 0 if success, error code otherwise
+/////////////////////////////////////////////////////////////////
+function INT DeleteWindowsServiceAccount(hMSI, serviceAccount)
+	INT result;
+begin
+	LoadInstallerCommonDLL(hMSI);
+	result = deleteServiceUserAccount(serviceAccount);
+	UnloadInstallerCommonDLL(hMSI);
+	return result;
+end;  
+
+////////////////////////////////////////////////////////////////////////////
+// Sleeps to wait for the a service to start
+// hMSI : MSI handle
+// startPort : first port to try
+////////////////////////////////////////////////////////////////////////////
+//function INT WaitForService (hMSI, time)
+//	INT iResult;
+//begin
+//   LoadInstallerCommonDLL(hMSI);
+//   iResult = findAvailablePort(time);
+//   UnloadInstallerCommonDLL(hMSI);               
+//   return iResult;
+//end;     
+#define COMMON_IMPL

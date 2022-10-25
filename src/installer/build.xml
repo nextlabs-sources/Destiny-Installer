@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="build" name="Installer projects">
+
+	<var name="nlbuildroot" value="${basedir}/../.." />
+
+	<property environment="env" />
+
+	<property file="${nlbuildroot}/scripts/build.properties" />
+
+	<property name="build_dir" value="${nlbuildroot}/build" />
+	<property name="package64_dir" value="${build_dir}/package64" />
+	<property name="zip_file_name_suffix" value="${version_str}-${version_build_short}-${build_date_long}.zip" />
+	<property name="zip_file_cc64" value="${build_dir}/ControlCenter-64-${zip_file_name_suffix}" />
+
+	<property name="package_chef_dir" value="${build.root.dir}/cc_chef" />
+	<property name="cc_chef_linux_dir" value="${package_chef_dir}/cc_linux" />
+	<property name="cc_chef_win_dir" value="${package_chef_dir}/cc_win" />
+	<property name="package_linux_dir" value="${build.root.dir}/package_linux" />
+	<property name="java.build.dest" value="${build.root.dir}/installer/classes"/>
+
+	<tstamp>
+		<format property="TODAY" pattern="yyyy-MM-dd"  locale="en,UK" />
+	</tstamp>
+
+	<target name="init">
+		<property name="InstallShieldFolder" value="C:/Program Files/InstallShield/2010"/>
+		<property name="InstallShieldStandaloneBuilder" value="i:"/>
+		<property name="InstallShieldStandaloneBuilder.exe" value="i:\System\IsCmdBld.exe"/>
+		<property name="InstallShieldMergeModulePath" value="${installer.input.dir}/common/mergemodules"/>
+		<loadproperties srcfile="${build.root.dir}/version.properties"/>
+		<property name="version.etc.dir" value="${src.root.dir}/common/version/etc"/>
+	</target>
+
+	<target name="build" depends="prepare, package-cc-chef">
+	</target>
+
+	<target name="clean" description="Cleans all the installers">
+		<delete dir="${installer.dir}" failonerror="true"/>
+	</target>
+
+	<target name="prepare" depends="init">
+		<mkdir dir="${installer.dir}"/>
+		<mkdir dir="${installer.input.dir}"/>
+	</target>
+
+	<target name="rebuild" depends="clean, build" description="Rebuilds all the installers"/>
+
+	<target name="compile-java-helper" >
+		<mkdir dir="${java.build.dest}"/>
+		<javac srcdir="${basedir}/control_center/java" destdir="${java.build.dest}" classpath="${build.root.dir}/tools/crypt/crypt.jar" debug="${compile.debug}" verbose="${compile.verbose}" source="${compile.source}" target="${compile.target}" bootclasspath="${compile.bootclasspath}"/>
+	</target>
+    
+    <target name="gen-java-helper-jar-chef" depends="compile-java-helper" 
+		    description="creates a jar file with the java classes">
+		<mkdir dir="${build.root.dir}/run/javahelper" />
+		<jar destfile="${build.root.dir}/run/javahelper/java-helper.jar">
+			<fileset dir="${java.build.dest}">
+				<include name="**/*"/>
+			</fileset>
+		</jar>
+	</target>
+    
+	<target name="package-cc-chef" depends="gen-java-helper-jar-chef">
+		<delete dir="${package_chef_dir}"/>
+		<mkdir dir="${package_chef_dir}" />
+		<mkdir dir="${cc_chef_linux_dir}" />
+		<mkdir dir="${cc_chef_win_dir}" />
+
+		<mkdir dir="${package_chef_dir}/Policy_Server"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/java"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/tools"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/aliased_shares"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/apps"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/certificates"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/configuration"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/custom_apps"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/license"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/logs"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/plugins"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/images"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/logqueue"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/data"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/data/search-index"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/tomcat"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/tomcat/logs"/>
+		<mkdir dir="${package_chef_dir}/Policy_Server/server/resources"/>
+
+		<copy todir="${package_chef_dir}/Policy_Server/tools" failonerror="true">
+			<fileset dir="${build.root.dir}/tools">
+				<exclude name="automation/**"/>
+				<exclude name="appdiscovery/**"/>
+				<exclude name="enrollmentPreview/**"/>
+				<exclude name="InstallService/**"/>
+				<exclude name="jbosscrypt/**"/>
+				<exclude name="reporterdata/**"/>
+				<exclude name="Automation.zip"/>
+				<exclude name="ResourcePathDiscovery.exe"/>
+			</fileset>
+		</copy>
+
+		<!-- Copy seed-data to policy server -->
+		<mkdir dir="${package_chef_dir}/Policy_Server/tools/dbInit/pf/seed_data" />
+		<copy todir="${package_chef_dir}/Policy_Server/tools/dbInit/pf/seed_data" failonerror="true">
+			<fileset dir="${build.root.dir}/seed_data">
+				<include name="*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/resources" failonerror="true">
+			<fileset dir="${build.root.dir}/run/server/resources">
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/apps" failonerror="true">
+			<fileset dir="${build.root.dir}/run/server/apps">
+				<exclude name="rest-api.war"/>
+				<exclude name="odrm*.war"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/license" failonerror="true">
+			<fileset dir="${build.root.dir}/run/server/license">
+				<include name="*.jar"/>
+			</fileset>
+		</copy>
+		<copy todir="${package_chef_dir}/Policy_Server/server/configuration" failonerror="true">
+			<fileset dir="${build.root.dir}/run/server/configuration">
+				<include name="*.*"/>
+			</fileset>
+			<fileset dir="${build.root.dir}/run">
+				<include name="server-template.xml"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/images" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin/ui/images">
+				<include name="*.ico"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/tomcat" failonerror="true">
+			<fileset dir="${build.root.dir}/run/server/tomcat">
+				<include name="**"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${package_chef_dir}/Policy_Server/server/certificates" failonerror="true">
+			<fileset dir="${build.root.dir}">
+				<include name="temp_agent.cer"/>
+				<include name="orig_temp_agent.cer"/>
+				<include name="policyAuthor.cer"/>
+				<include name="enrollment.cer"/>
+				<include name="keymanagement.cer"/>
+                <include name="legacy-dcc.cer"/>
+			</fileset>
+		</copy>
+
+		<move file="${package_chef_dir}/Policy_Server/server/tomcat/bin/tomcat8.exe"
+			  tofile="${package_chef_dir}/Policy_Server/server/tomcat/bin/PolicyServer.exe"
+			  overwrite="true"
+			  />
+
+		<!-- copy elastic search engine contents -->
+		<copy todir="${package_chef_dir}/Policy_Server/server/data/search-index" failonerror="true">
+			<fileset dir="${env.NLEXTERNALDIR2}/elasticsearch/elasticsearch-6.4.3">
+				<include name="**"/>
+			</fileset>
+		</copy>
+
+		<antcall target="package-cc-linux-chef"/>
+		<antcall target="package-cc-windows-chef"/>
+		<antcall target="package-cc-linux-chef-saas"/>
+
+	</target>
+
+	<target name="package-cc-linux-chef" description="Make the Control Center OnPremise Installer - Linux(64-bit)">
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/bin"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/bin/ui"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/cookbooks"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/support"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/engine"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/platform/ppc64_suse/java"/>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/cookbooks" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/cookbooks">
+				<include name="**"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/engine" failonerror="true">
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.6">
+				<include name="engine_linux.zip"/>
+			</fileset>
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+				<include name="gems_linux.zip"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server" failonerror="true">
+			<fileset dir="${package_chef_dir}/Policy_Server">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/java" failonerror="true">
+			<fileset dir="${java.linux.jdk64.dir}">
+				<exclude name="src.zip"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server" failonerror="true">
+			<fileset dir="${build.root.dir}/linux">
+				<include name="*.sh"/>
+			</fileset>
+		</copy>
+
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/server/plugins/config"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/server/plugins/jar"/>
+		<unzip src="${oauth2jwtsecret_plugin_zip}" dest="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/server/plugins/config">
+			<patternset>
+				<include name="Control Center/JwtSecretServer.properties" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+		<unzip src="${oauth2jwtsecret_plugin_zip}" dest="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/server/plugins/jar">
+			<patternset>
+				<include name="Control Center/Oauth2JWTSecret-Plugin-server.jar" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/bin" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin">
+				<include name="*.sh"/>
+				<include name="*.rb"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/bin/ui" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin/ui">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/">
+				<include name="cc_properties.json"/>
+				<include name="README.MD"/>
+				<include name="version.txt"/>
+				<include name="install.sh"/>
+				<include name="suse_install.sh"/>
+			</fileset>
+		</copy>
+		
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/platform/ppc64_suse/java" failonerror="true">
+			<fileset dir="${java.linux.ppc64.jdk64.dir}"/>
+		</copy>
+		
+		<copy file="${chefclient.ppc64.file}" todir="${cc_chef_linux_dir}/PolicyServer/platform/ppc64_suse" failonerror="true"/>
+		<copy file="${jsvc.ppc64.file}" todir="${cc_chef_linux_dir}/PolicyServer/platform/ppc64_suse" failonerror="true"/>
+		
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/suse_install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/install_ui.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/suse_install_ui.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/cc_properties.json">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/README.MD">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@platform@"  value="Linux"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/version.txt">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/suse_install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+		</replace>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/support" failonerror="true">
+			<fileset dir="${build.root.dir}/run/javahelper">
+				<include name="*.jar"/>
+			</fileset>
+			<fileset dir="${build.root.dir}/run/server/tomcat/shared/lib">
+				<include name="*jdbc*.jar"/>
+			</fileset>
+			<fileset dir="${xlib_jar_dir}">
+				<include name="jakarta-regexp-*.jar"/>
+				<include name="bcprov-*.jar"/>
+			</fileset>
+		</copy>
+
+		<zip destfile="${build.root.dir}/ControlCenter-Linux-chef-${version_str}-${version_build_short}.zip">
+			<zipfileset dir="${cc_chef_linux_dir}"/>
+		</zip>
+	</target>
+
+	<target name="package-cc-linux-chef-saas" description="Make the Control Center SaaS Installer - Linux(64-bit)">
+		<delete dir="${cc_chef_linux_dir}/PolicyServer/bin"/>
+		<delete dir="${cc_chef_linux_dir}/PolicyServer/cookbooks"/>
+		<delete dir="${cc_chef_linux_dir}/PolicyServer/dist"/>
+		<delete dir="${cc_chef_linux_dir}/PolicyServer/engine"/>
+		<delete dir="${cc_chef_linux_dir}/PolicyServer/platform/ppc64_suse"/>
+
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/bin"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/bin/ui"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/cookbooks"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/dist/support"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/engine"/>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/cookbooks" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/cookbooks">
+				<include name="**"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/engine" failonerror="true">
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.6">
+				<include name="engine_linux.zip"/>
+			</fileset>
+			<fileset dir="${env.NLEXTERNALDIR2}/chef/chef-client/12.4">
+				<include name="gems_linux.zip"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server" failonerror="true">
+			<fileset dir="${package_chef_dir}/Policy_Server">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server/java" failonerror="true">
+			<fileset dir="${java.linux.jdk64.dir}">
+				<exclude name="src.zip"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/Policy_Server" failonerror="true">
+			<fileset dir="${build.root.dir}/linux">
+				<include name="*.sh"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/bin" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin">
+				<include name="*.sh"/>
+				<include name="*.rb"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/bin/ui" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin/ui">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/">
+				<include name="cc_properties.json"/>
+				<include name="README.MD"/>
+				<include name="version.txt"/>
+				<include name="install.sh"/>
+			</fileset>
+		</copy>
+
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<delete file="${cc_chef_linux_dir}/PolicyServer/bin/suse_install.sh"/>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/bin/install_ui.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<delete file="${cc_chef_linux_dir}/PolicyServer/bin/suse_install_ui.sh"/>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/cc_properties.json">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/README.MD">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@platform@"  value="Linux"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/version.txt">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_linux_dir}/PolicyServer/install.sh">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+		</replace>
+		<delete file="${cc_chef_linux_dir}/PolicyServer/suse_install.sh"/>
+
+		<copy todir="${cc_chef_linux_dir}/PolicyServer/dist/support" failonerror="true">
+			<fileset dir="${build.root.dir}/run/javahelper">
+				<include name="*.jar"/>
+			</fileset>
+			<fileset dir="${build.root.dir}/run/server/tomcat/shared/lib">
+				<include name="*jdbc*.jar"/>
+			</fileset>
+			<fileset dir="${xlib_jar_dir}">
+				<include name="jakarta-regexp-*.jar"/>
+				<include name="bcprov-*.jar"/>
+			</fileset>
+		</copy>
+
+		<mkdir dir="${build.root.dir}/run/server/apps"/>
+
+		<zip destfile="${build.root.dir}/ControlCenter-Linux-chef-SaaS-${version_str}-${version_build_short}.zip">
+			<zipfileset dir="${cc_chef_linux_dir}"/>
+		</zip>
+	</target>
+
+	<target name="package-cc-windows-chef" description="Make the Control Center Installer - Windows(64-bit)">
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/bin"/>
+		<mkdir dir="${cc_chef_linux_dir}/PolicyServer/bin/ui"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/cookbooks"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist/support"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist/support/fate"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/engine"/>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/cookbooks" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/cookbooks">
+				<include name="**"/>
+			</fileset>
+		</copy>
+
+		<!-- Copy embedded chef engine and prepare it with required gems -->
+		<unzip src="${env.NLEXTERNALDIR2}/chef/chef-client/12.6/engine_winx.zip" dest="${cc_chef_win_dir}/PolicyServer/engine"/>
+		<unzip src="${env.NLEXTERNALDIR2}/chef/chef-client/12.4/gems_winx.zip" dest="${cc_chef_win_dir}/PolicyServer/engine"/>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/engine/chef/embedded/lib/ruby/gems/2.0.0/gems/" failonerror="true">
+			<fileset dir="${cc_chef_win_dir}/PolicyServer/engine/gems/gems/">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+		<copy todir="${cc_chef_win_dir}/PolicyServer/engine/chef/embedded/lib/ruby/gems/2.0.0/specifications/" failonerror="true">
+			<fileset dir="${cc_chef_win_dir}/PolicyServer/engine/gems/specifications/">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+		<copy todir="${cc_chef_win_dir}/PolicyServer/engine/chef/embedded/lib/ruby/gems/2.0.0/extensions/" failonerror="true">
+			<fileset dir="${cc_chef_win_dir}/PolicyServer/engine/gems/extensions/">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<delete dir="${cc_chef_win_dir}/PolicyServer/engine/gems"/>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server" failonerror="true">
+			<fileset dir="${package_chef_dir}/Policy_Server">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/java" failonerror="true">
+			<fileset dir="${java.jdk64.dir}">
+				<exclude name="src.zip"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/bin" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin">
+				<include name="*.bat"/>
+				<include name="*.rb"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/bin/ui" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/bin/ui">
+				<include name="**"/>
+				<include name="**/*"/>
+				<include name="**/*.*"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer" failonerror="true">
+			<fileset dir="${src.root.dir}/installer/control_center/">
+				<include name="cc_properties.json"/>
+				<include name="README.MD"/>
+				<include name="version.txt"/>
+				<include name="install.bat"/>
+			</fileset>
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/dist/support/fate" failonerror="true">
+			<zipfileset src="${xlib_fate_build_artifacts_bin_zip_file}" includes="bin/release_win_x86/ResourcePathDiscovery.exe" />
+		</copy>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/tools" failonerror="true">
+			<fileset dir="${build.root.dir}/tools/InstallService">
+				<include name="installService.bat"/>
+			</fileset>
+			<fileset dir="${cc_chef_win_dir}/PolicyServer/dist/support/fate/bin/release_win_x86">
+				<include name="ResourcePathDiscovery.exe"/>
+			</fileset>
+		</copy>
+
+		<delete dir="${cc_chef_win_dir}/PolicyServer/dist/support/fate" />
+
+		<replace file="${cc_chef_win_dir}/PolicyServer/bin/install.bat">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_win_dir}/PolicyServer/bin/install_ui.bat">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_win_dir}/PolicyServer/README.MD">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@platform@"  value="Windows"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_win_dir}/PolicyServer/version.txt">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_win_dir}/PolicyServer/version.txt">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+			<replacefilter token="@build_no@"  value="${version_build_short}"/>
+			<replacefilter token="@built_date@"  value="${TODAY}"/>
+		</replace>
+		<replace file="${cc_chef_win_dir}/PolicyServer/install.bat">
+			<replacefilter token="@cc_version@"  value="${version_str}"/>
+		</replace>
+
+		<copy todir="${cc_chef_win_dir}/PolicyServer/dist/support" failonerror="true">
+			<fileset dir="${build.root.dir}/run/javahelper">
+				<include name="*.jar"/>
+			</fileset>
+			<fileset dir="${build.root.dir}/run/server/tomcat/shared/lib">
+				<include name="*jdbc*.jar"/>
+			</fileset>
+			<fileset dir="${xlib_jar_dir}">
+				<include name="jakarta-regexp-*.jar"/>
+				<include name="bcprov-*.jar"/>
+			</fileset>
+			<fileset dir="${env.NLEXTERNALDIR2}/apache-commons-daemon\1.0.15\signed">
+				<include name="prunsrv.exe"/>
+			</fileset>
+		</copy>
+
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/server/plugins/config"/>
+		<mkdir dir="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/server/plugins/jar"/>
+		<unzip src="${oauth2jwtsecret_plugin_zip}" dest="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/server/plugins/config">
+			<patternset>
+				<include name="Control Center/JwtSecretServer.properties" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+		<unzip src="${oauth2jwtsecret_plugin_zip}" dest="${cc_chef_win_dir}/PolicyServer/dist/Policy_Server/server/plugins/jar">
+			<patternset>
+				<include name="Control Center/Oauth2JWTSecret-Plugin-server.jar" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+
+		<zip destfile="${build.root.dir}/ControlCenter-Windows-chef-${version_str}-${version_build_short}.zip">
+			<zipfileset dir="${cc_chef_win_dir}"/>
+		</zip>
+	</target>
+</project>

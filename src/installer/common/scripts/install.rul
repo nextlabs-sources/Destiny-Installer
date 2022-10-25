@@ -1,0 +1,304 @@
+/*
+ * Created on Mar 17, 2007
+ * 
+ * All sources, binaries and HTML pages (C) copyright 2004 by Blue Jungle Inc.,
+ * Redwood City CA, Ownership remains with Blue Jungle Inc, All rights reserved
+ * worldwide.
+ */
+
+#include "..\..\common\scripts\common.h"
+#include "..\..\common\scripts\install.h"
+
+             
+//////////////////////////////////////////////////////////////////////////
+// This function returns whether a feature is about to be installed
+// featureName : name of the feature
+// Returns : true if the feature is about to be installed
+//           false if the feature is not about to be installed   
+//////////////////////////////////////////////////////////////////////////
+function BOOL IsInstallingFeature(hMSI, featureName)   
+	WSTRING conditionExpr;
+	NUMBER eval;
+	BOOL result;
+    wstring supportdir;    
+    NUMBER bufSize;
+	
+begin  
+
+     result = FALSE;     
+     supportdir = "";
+	MsiGetProperty(hMSI, "SUPPORTDIR", supportdir, bufSize);
+	if(supportdir != "") then
+	   conditionExpr = "(!" + featureName + "=2) AND (&" + featureName + "=3)";
+        eval = MsiEvaluateCondition(hMSI, conditionExpr);
+        if (eval == MSICONDITION_TRUE) then
+    	      result = TRUE;
+        endif;
+     else     
+	   result=DeferredIsInstallingFeature(hMSI, featureName);
+	endif;
+	
+    return result;
+end;
+
+function BOOL DeferredIsInstallingFeature(hMSI, featureName)
+    string value;   
+begin
+      value=DeferredGetProperty(hMSI,featureName);
+	if(StrLength( value ) >=4) then
+	     return TRUE;
+	endif;
+	return FALSE;
+end;
+
+//////////////////////////////////////////////////////////////////////////
+// This function returns whether a feature is remaining installed
+// featureName : name of the feature
+// Returns : true if the feature is remaining installed
+//           false if the feature not remaining installed   
+//////////////////////////////////////////////////////////////////////////
+function BOOL IsKeepingFeatureInstalled(hMSI, featureName)
+	WSTRING conditionExpr;
+	NUMBER eval;
+	BOOL result;
+     wstring supportdir;  
+     NUMBER bufSize;
+	
+begin     
+	
+     result = FALSE;     
+     supportdir = "";
+	MsiGetProperty(hMSI, "SUPPORTDIR", supportdir, bufSize);
+	if(supportdir != "") then
+     	   conditionExpr = "(!" + featureName + "=3) AND (NOT &" + featureName + "=2)"; 
+         eval = MsiEvaluateCondition(hMSI, conditionExpr);
+         if (eval == MSICONDITION_TRUE) then
+    	     result = TRUE;
+         endif;
+     else     
+	   result=DeferredIsKeepingFeatureInstalled(hMSI, featureName);
+	endif;
+      
+    return result;
+end;
+
+function BOOL DeferredIsKeepingFeatureInstalled(hMSI, featureName)
+    string value;   
+begin
+     value=DeferredGetProperty(hMSI,featureName+"keeping");
+	if(StrLength( value ) >=4) then
+	     return TRUE;
+	endif;
+	return FALSE;
+end;
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// This function returns whether a feature is remaining uninstalled
+// featureName : name of the feature
+// Returns : true if the feature is remaining uninstalled
+//           false if the feature not remaining uninstalled   
+//////////////////////////////////////////////////////////////////////////
+function BOOL IsKeepingFeatureUninstalled(hMSI, featureName)
+	WSTRING conditionExpr;
+	NUMBER eval;
+	BOOL result;
+     wstring supportdir; 
+     NUMBER bufSize;
+begin     
+	result = FALSE;     
+     supportdir = "";
+	MsiGetProperty(hMSI, "SUPPORTDIR", supportdir, bufSize);
+	if(supportdir != "") then
+   	   conditionExpr = "(!" + featureName + "=2) AND (&" + featureName + "=-1)";
+        eval = MsiEvaluateCondition(hMSI, conditionExpr);
+        if (eval == MSICONDITION_TRUE) then
+    	     result = TRUE;
+        endif;
+     else     
+	   result=DeferredIsKeepingFeatureUninstalled(hMSI, featureName);
+	endif;
+
+    return result;
+end;  
+
+function BOOL DeferredIsKeepingFeatureUninstalled(hMSI, featureName)
+    string value;   
+begin
+     value=DeferredGetProperty(hMSI,featureName+"keeping_uninstalled");
+	if(StrLength( value ) >=4) then
+	     return TRUE;
+	endif;
+	return FALSE;
+end;
+
+
+//////////////////////////////////////////////////////////////////////////
+// This function returns whether a product is already installed.
+// productCode : GUID of the product 
+// Returns : true if the product is installed
+//           false if the product is not installed  
+//////////////////////////////////////////////////////////////////////////
+function BOOL IsProductInstalled(hMSI, productCode)
+	INT result;
+begin
+	LoadInstallerCommonDLL(hMSI);
+	result = isProductInstalled(productCode);
+	UnloadInstallerCommonDLL(hMSI);   
+	if (result == ERROR_SUCCESS) then
+		return TRUE;
+	else
+		return FALSE;
+	endif;
+end;
+
+// Returns whether a product is already installed.
+// productCode : GUID of the product 
+// Returns : true if the product is installed
+//           false if the product is not installed  
+function BOOL DeferredIsProductInstalled(hMSI, productCode)
+	INT result;
+begin
+	WriteToLogFile (hMSI, "DeferredIsProductInstalled: [" + productCode + "]");
+	DeferredLoadInstallerCommonDLL(hMSI);
+	result = isProductInstalled(productCode);
+	DeferredUnloadInstallerCommonDLL(hMSI);   
+	if (result == ERROR_SUCCESS) then
+		return TRUE;
+	else
+		return FALSE;
+	endif;
+end;
+
+//////////////////////////////////////////////////////////////////////////
+// This function returns whether a feature is about to be uninstalled 
+// featureName : name of the feature
+// Returns : true if the feature is about to be uninstalled
+//           false if the feature is not about to be uninstalled   
+//////////////////////////////////////////////////////////////////////////
+function BOOL IsUninstallingFeature(hMSI, featureName)
+	WSTRING conditionExpr;
+	NUMBER eval;
+	BOOL result;
+	NUMBER bufSize;
+	wstring supportdir;
+begin     
+	result = FALSE;     
+     supportdir = "";
+	MsiGetProperty(hMSI, "SUPPORTDIR", supportdir, bufSize);
+	if(supportdir != "") then
+	   conditionExpr = "(!" + featureName + "=3) AND (&" + featureName + "=2)";
+        eval = MsiEvaluateCondition(hMSI, conditionExpr);
+        if (eval == MSICONDITION_TRUE) then
+    	      result = TRUE;
+        endif;
+     else     
+	   result=DeferredIsUninstallingFeature(hMSI, featureName);
+	endif;
+
+    return result;
+end; 
+
+function BOOL DeferredIsUninstallingFeature(hMSI, featureName)
+    string value;   
+begin
+     value=DeferredGetProperty(hMSI,featureName+"uninstalling");
+	if(StrLength( value ) >=4) then
+	     return TRUE;
+	endif;
+	return FALSE;
+end;       
+
+
+function INT IsServiceOpen(hMSI) 
+    HWND nHwnd;   
+    NUMBER i;                       
+    LIST listID; 
+    NUMBER nReturn;
+    BOOL bServices;
+begin 
+    //Disable (BACKGROUND); 
+    
+    AskAgain:
+    listID = ListCreate(STRINGLIST);   
+    bServices = FALSE;
+
+    nHwnd = FindWindow ("","Computer Management"); 
+    if (nHwnd != NULL) then 
+		ListAddString (listID, "Computer Management", AFTER);   
+		bServices = TRUE;
+    endif;     
+    
+    nHwnd = FindWindow ("", "Services"); 
+    if (nHwnd != NULL) then 
+		ListAddString (listID, "Services", AFTER);   
+		bServices = TRUE;
+	endif;   
+
+	nHwnd = FindWindow ("", "Server Manager"); 
+    if (nHwnd != NULL) then 
+		ListAddString (listID, "Server Manager", AFTER);   
+		bServices = TRUE;
+	endif; 
+    
+    if (bServices) then
+    	nReturn = SdFilesInUse ("", "The following windows are currently open. Please close the following windows and click Retry to continue", "", listID);
+    	if (nReturn = IDRETRY) then
+    		ListDestroy(listID);
+    		goto AskAgain;  
+    	elseif (nReturn = IDIGNORE) then
+    		MessageBox ("Ignore closing the services is not allowed. Please close those windows and click RETRY.",SEVERE);	
+    		ListDestroy(listID);
+    		goto AskAgain;
+   		endif;
+   	endif;
+    //Enable (BACKGROUND);
+    return ERROR_SUCCESS;
+end; 
+               
+function INT InstallCCService(hMSI)
+    INT result;
+    STRING serviceName,szRes,installDir;
+begin
+    WriteToLogFile(hMSI, "Entering InstallCCService");
+    serviceName=GetProperty(hMSI,"TOMCAT_SERVICE_ID_EDLP");
+    installDir=GetProperty(hMSI,"INSTALLDIR");
+    if(ServiceExistsService(serviceName)==FALSE) then
+         WriteToLogFile(hMSI, "Service does not exist, creating service.");
+         result=ServiceInitParams();
+         result=ServiceAddService(serviceName,"Control Center Policy Server","Control Center Policy Server","\""+installDir^"server\\tomcat\\bin\\PolicyServer.exe\" //RS//CompliantEnterpriseServer",FALSE,"");
+         if(result!=ERROR_SUCCESS) then
+              NumToStr(szRes,result);
+              WriteToLogFile(hMSI, "Failed to create service:"+szRes);
+              MessageBox ("Unable to automatically add the Control Center Service. Please execute the InstallService.bat file in the tools directory after installation completes.", SEVERE);
+              return ERROR_SUCCESS;
+         endif;
+    endif;
+    return ERROR_SUCCESS;
+end;
+
+
+function INT RemoveCCService(hMSI)
+    INT result;
+    STRING serviceName,szRes;
+    NUMBER nWait;
+begin
+    WriteToLogFile(hMSI, "Enter RemoveCCservice");
+    serviceName=GetProperty(hMSI,"TOMCAT_SERVICE_ID_EDLP");
+    if(ServiceExistsService(serviceName)==TRUE) then
+         WriteToLogFile(hMSI, "Service found! Deleting the service.");
+
+         result = ServiceRemoveService(serviceName);
+              NumToStr(szRes,result);
+         if (ServiceExistsService(serviceName) == TRUE) then
+              WriteToLogFile(hMSI, "Remove service failed:"+szRes);
+              MessageBox ("Unable to automatically remove the Control Center Service. Please issue SC delete EnterpriseDLPServer to delete the service after uninstallation completes.", SEVERE);
+              return ERROR_SUCCESS;
+         endif;
+         
+     endif;
+    return ERROR_SUCCESS;
+end;  
+  
+  

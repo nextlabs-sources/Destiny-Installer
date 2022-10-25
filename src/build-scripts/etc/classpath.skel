@@ -1,0 +1,27 @@
+<fileset id="axis.jars" dir="${axis.lib}">
+    <include name="**/*.jar"/>      
+    <exclude name="**/log4j-1.2.8.jar"/>        
+    <exclude name="**/servlet.jar"/>                    
+    <exclude name="**/mailapi_1_3_1.jar"/>
+    <exclude name="**/xercesImpl.jar"/>
+</fileset>
+
+<fileset id="xerces.jars" dir="${xerces.lib}">
+    <include name="**/xercesImpl.jar"/>      
+    <include name="**/xml-apis.jar"/>      
+</fileset>
+
+<path id="compile.classpath">
+    <pathelement location="${xlib_jar_dir}/catalina.jar" />
+    <pathelement location="${xlib_jar_dir}/tools.jar" />
+    <pathelement location="${xlib_jar_dir}/junit-4.3.jar" />
+    <pathelement location="${xlib_jar_dir}/jsse.jar" />
+    <pathelement location="${xlib_jar_dir}/activation.jar" />
+    <pathelement location="${xlib_jar_dir}/mail.jar" />
+    <pathelement location="${xlib_jar_dir}/servlet-api.jar" />
+    <fileset refid="axis.jars" />
+    <pathelement location="${xlib_jar_dir}/hibernate2.jar" />
+    <pathelement path="${java.class.path}" />
+    <pathelement location="${xlib_jar_dir}/commons-logging-1.0.4.jar" />
+    <pathelement location="${xlib_jar_dir}/c3p0-0.9.5.2.jar" />
+</path>

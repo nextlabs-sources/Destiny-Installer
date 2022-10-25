@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." name="Installer common code">
+	<property name="src.dir" value="${basedir}" />
+	<property name="installer.input.common.dir" value="${installer.input.dir}/common"/>
+	
+	<target name="build-32" description="32bit only">
+		<antcall target="prebuild-shared" />
+		
+		<copy todir="${installer.input.common.dir}/jvm" failonerror="true">
+			<fileset dir="${java.jdk.dir}"/>
+		</copy>
+		
+		<antcall target="postbuild-shared" />
+	</target>
+	
+	<target name="build-64" description="64bit only">
+		<antcall target="prebuild-shared" />
+		
+		<copy todir="${installer.input.common.dir}/jvm" failonerror="true">
+			<fileset dir="${java.jdk64.dir}"/>
+		</copy>
+
+		<antcall target="postbuild-shared" />
+	</target>
+	
+	<target name="prebuild-shared" description="common prebuild tasks between 64 and 32 bit">
+		<mkdir dir="${installer.input.common.dir}/images"/>
+		<copy todir="${installer.input.common.dir}/images" failonerror="true" overwrite="false">
+			<fileset dir="images"/>
+		</copy>
+
+		<!-- Common installer DLL -->
+		<mkdir dir="${installer.input.common.dir}/dll"/>		
+		<copy todir="${installer.input.common.dir}/dll" failonerror="true" overwrite="false">		
+			<fileset dir="${build.root.dir}/platform/win32/installer/debug">
+				<include name="installercommon.dll"/>
+			</fileset>
+		</copy>
+		
+		<!-- Common license agreement -->
+		<copy file="etc/agreement.rtf" tofile="${installer.input.common.dir}/agreement.rtf"/>	
+		
+		<!-- Common installer Merge Modules -->
+		<mkdir dir="${installer.input.common.dir}/mergemodules"/>		
+		<copy todir="${installer.input.common.dir}/mergemodules" failonerror="true" overwrite="true">		
+			<fileset dir="mergemodules"/>
+		</copy>
+		
+		<!-- clear the java folder since it may be different version -->
+		<delete dir="${installer.input.common.dir}/jvm" />
+		<mkdir dir="${installer.input.common.dir}/jvm"/>
+	</target>
+	
+	<target name="postbuild-shared" description="common postbuild tasks between 64 and 32 bit">
+	
+		<!-- the jre is only used during the installation, 32bit only, even 64bit installer uses 32-bit components-->
+		
+		<mkdir dir="${installer.input.common.dir}/jre"/>		
+		<copy todir="${installer.input.common.dir}/jre" failonerror="true">
+			<fileset dir="${java.jdk.dir}/jre">
+				<exclude name="**/LICENSE*.rtf"/>
+				<exclude name="Welcome.html"/>
+				<exclude name="README.txt"/>
+				<exclude name="CHANGES"/>
+				<exclude name="im/**"/>
+				<exclude name="lib/audio/**"/>
+				<exclude name="javaws/**"/>
+				<exclude name="lib/font.properties.*"/>
+				<exclude name="lib/*.txt"/>
+			</fileset>
+		</copy>
+	
+		<zip destfile="${installer.input.common.dir}/jre.zip" basedir="${installer.input.common.dir}/jre" update="false"/>
+		
+		<!--  7za zip utility -->
+		<mkdir dir="${installer.input.common.dir}/7za"/>
+		<copy todir="${installer.input.common.dir}/7za" failonerror="true" overwrite="false">
+			<fileset dir="${7za.root.dir}">
+				<include name="7za.exe"/>
+			</fileset>
+		</copy>
+	</target>
+		
+	<target name="prepare">
+		<mkdir dir="${build.dest}"/>
+	</target>	
+</project>

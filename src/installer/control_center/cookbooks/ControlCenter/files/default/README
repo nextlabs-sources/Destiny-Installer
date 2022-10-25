@@ -1,0 +1,5 @@
+The policy-server-daemon.sh script is a modification of tomcat's daemon.sh.
+
+The policy-server-daemon.sh script uses jsvc to run the server as a daemon. It expects jsvc binary executable to be at $CATALINA_BASE/bin/jsvc or "$CATALINA_HOME/bin/jsvc". So you must put it under there. (Source tarballs for jsvc are included with the Tomcat binaries, and need to be compiled. refer to: http://tomcat.apache.org/tomcat-8.0-doc/setup.html)
+
+The jsvc binary under cookbook files folder is compiled using 64bit glibc (version 2.5) library. So it should work on any 64bit linux with glibc version >= 2.5 which including RHEL>=5.11, Fedora>=6, centos>=5.11, debian>=5.0, ubuntu>=7.04.

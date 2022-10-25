@@ -1,0 +1,70 @@
+{
+	"title": "Java Policy Controller",
+	"back_btn": "Back",
+	"next_btn": "Next",
+	"cancel_btn": "Cancel",
+	"cancel_confirm": "Are you sure you want to cancel Java Policy Controller Installation?",
+	"finish_btn": "Finish",
+	"browse_file_btn": "Browse",
+	"browse_folder_btn": "Browse",
+	"common": {
+		"company_name": "Nextlabs",
+		"product_name": "Java Policy Controller"
+	},
+	"welcome_page": {
+		"welcome_para": "Welcome to the installation wizard",
+		"copyright_message": "Warning: this product is protected by copyright law and international treaties"
+	},
+	"agreement_page": {
+		"accept_message": "Agree &amp; proceed",
+		"reject_message": "I don't agree"
+	},
+	"step1_page": {
+		"heading": "Enter the current Tomcat/Jboss server details"
+	},
+	"step2_page": {
+		"heading": "ICENET Server Location and Policy Controller details"
+	},
+	"install_page": {
+		"progress_save_config": "Saving Collected Information",
+		"progress_start_chef": "Starting installation...",
+		"progress_precheck": "Installation prechecks...",
+		"progress_install": "Coping files...",
+		"progress_finish": "Installation completed",
+		"progress_canceled": "Installation canceled",
+		"progress_rollback": "Rollbacking files...",
+		"progress_rollback_done": "Rollback completed",
+		"progress_failed": "Insatllation Failed"
+	},
+	"finish_page": {
+		"body": "The install Wizard has successfully installed nextlabs java policy Controller.\nClick Finish to exit the wizard",
+		"aborted_body": "You have canceled the installation and the installation didn't make change to your system",
+		"failed_body": "The installation failed. Sorry"
+	},
+	"inputs": {
+		"server_ip": "Application Server Name/IP",
+		"server_port": "Application Server Port",
+		"server_type": "Application Server Type",
+		"agent_type": "Agent Type",
+		"policy_controller_host": "Policy Controller Host",
+		"policy_controller_port": "Policy Controller Port",
+		"cc_host": "ICENET Server Host",
+		"cc_port": "ICENET Server Port",
+		"drive_root_dir": "Drive Name",
+		"installation_dir": "Application Server Location",
+		"dpc_path": "DPC Path",
+		"temp_dir": "Temporary Directory",
+		"jboss_installation_type": "JBoss Installation Type",
+		"CATALINA_HOME": "Application Server Location"
+	},
+	"ErrorMsgTemplate": "The %s you specified is not valid: %s",
+	"validator_errors": {
+		"ip": "not a valid ip adrress",
+		"hostname": "not a valid hostname",
+		"port": "not a valid port",
+		"dir": "the directory does not exist or is not readable",
+		"non_empty": "should not be empty",
+		"tomcat_version_not_support": "Tomcat version %s is not a supported version.\nPlease use Tomcat versions 8.0.0 through 8.0.37 or 8.5.35 to proceed.",
+		"tomcat_version_detect_failed": "We could not determine the Tomcat version.\nPlease ensure you are using Tomcat versions 8.0.0 through 8.0.37 or 8.5.35.\nProceed?"
+	}
+}

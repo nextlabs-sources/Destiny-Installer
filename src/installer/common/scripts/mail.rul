@@ -1,0 +1,48 @@
+/*
+ * Created on Aug 09, 2006
+ * 
+ * All sources, binaries and HTML pages (C) copyright 2004 by Blue Jungle Inc.,
+ * Redwood City CA, Ownership remains with Blue Jungle Inc, All rights reserved
+ * worldwide.
+ */
+
+#include "..\..\common\scripts\mail.h"
+
+/////////////////////////////////////////////////////////////////////
+// Validates the mail server settings
+/////////////////////////////////////////////////////////////////////
+function INT ValidateMailServerSettings(hMSI)
+	WSTRING label;
+	WSTRING errMsg;
+	WSTRING badPortNbErrMsg;
+	INT iResult, nResult;
+	WSTRING mailServerLocation;
+	INT port; 
+	WSTRING sPort, sPortCheck;
+begin
+	 AllowNextDialog(hMSI);
+	 mailServerLocation = GetProperty(hMSI, SMTP_SERVER_LOCATION_PROPERTY);
+	 label = @IDS_MAIL_SERVER_LOCATION_LABEL_SHORT;
+	 errMsg = @ERR_INVALID_MAIL_SERVER_LOCATION;
+	 badPortNbErrMsg = @ERR_INVALID_PORT_NUMBER;
+	 sPort = GetProperty(hMSI, SMTP_SERVER_PORT_PROPERTY);
+	 StrToNum(port,sPort);
+     NumToStr(sPortCheck,port);
+	 nResult = StrCompare (sPort, sPortCheck);
+	 iResult = ValidateLocationInput(hMSI, label, mailServerLocation, errMsg, port, badPortNbErrMsg, FALSE);
+	 if (iResult == 0) then
+	 	SetProperty(hMSI, SMTP_SERVER_LOCATION_PROPERTY, mailServerLocation);
+	 	SetProperty(hMSI, SMTP_SERVER_PORT_PROPERTY, sPort);
+	 else
+	 	DenyNextDialog(hMSI);
+	 endif;                      
+	 if (nResult != 0) then
+		MessageBox("Please enter a Valid Port Number.",INFORMATION);
+	 	DenyNextDialog(hMSI);
+	 endif;
+	 if(mailServerLocation="") then 
+	 	MessageBox("Please enter the valid Mail Server Location.",INFORMATION);
+	 	DenyNextDialog(hMSI);
+	 endif;
+	 return ERROR_SUCCESS;
+end;

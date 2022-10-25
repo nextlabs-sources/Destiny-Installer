@@ -1,0 +1,150 @@
+buildscript {
+    repositories {
+        maven {
+            url "${artifactoryContextUrl}/libs-release"
+            credentials {
+                username = artifactoryUser
+                password = artifactoryPassword
+            }
+        }
+    }
+}
+
+repositories {
+    maven {
+        url artifactoryContextUrl + (version.endsWith('SNAPSHOT') ? '/libs-snapshot' : '/libs-release')
+        credentials {
+            username = artifactoryUser
+            password = artifactoryPassword
+        }
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+    }
+}
+
+apply plugin: 'java'
+apply from: 'versions.gradle'
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+configurations {
+    download
+}
+
+dependencies {
+    download "com.nextlabs.cc.java.openjdk:jre-linux:${versions.java}@zip"
+    download "com.nextlabs.cc.java.openjdk:jre-linux-ppc64le:${versions.java}@zip"
+    download "com.nextlabs.cc.java.openjdk:jre-windows:${versions.java}@zip"
+    download "com.nextlabs.cc:apache-tomcat:${versions.tomcat}@zip"
+    download "com.nextlabs.cc:apache-tomcat-installer:${versions.tomcat}@exe"
+    download "com.nextlabs.cc.plugins.pdppluginmanager:pdp-plugin-manager-client:${versions.pdpPluginManager}"
+    download "com.nextlabs.cc.plugins.pdppluginmanager:pdp-plugin-manager-client-properties:${versions.pdpPluginManager}@properties"
+    download "com.nextlabs.cc.plugins.jwtsecret:pdp-jwtsecrets-manager-client:${versions.jwtSecretsManager}"
+    download "com.nextlabs.cc.plugins.jwtsecret:pdp-jwtsecrets-manager-client-properties:${versions.jwtSecretsManager}@properties"
+}
+
+task copyJpcDependencies() {
+    doLast {
+        copy {
+            from configurations.download.find { it.name == "apache-tomcat-${versions.tomcat}.zip" }
+            into "${buildDir}/tomcat"
+        }
+        copy {
+            from configurations.download.find { it.name == "apache-tomcat-installer-${versions.tomcat}.exe" }
+            into "${buildDir}/jpc/extras"
+            rename "apache-tomcat-installer-${versions.tomcat}.exe", "apache-tomcat-${versions.tomcat}.exe"
+        }
+        copy {
+            from configurations.download.find { it.name == "jre-linux-${versions.java}.zip" }
+            into "${buildDir}/jpc/extras"
+            rename "jre-linux-${versions.java}.zip", "openjdk-jre-linux-${versions.java}.zip"
+        }
+        copy {
+            from configurations.download.find { it.name == "jre-linux-ppc64le-${versions.java}.zip" }
+            into "${buildDir}/jpc/extras"
+            rename "jre-linux-ppc64le-${versions.java}.zip", "openjdk-jre-linux-ppc64le-${versions.java}.zip"
+        }
+        copy {
+            from configurations.download.find { it.name == "jre-windows-${versions.java}.zip" }
+            into "${buildDir}/jpc/extras"
+            rename "jre-windows-${versions.java}.zip", "openjdk-jre-windows-${versions.java}.zip"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar"
+            rename "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar", "PDPPluginManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config"
+            rename "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties", "PDPPluginManagerClient.properties"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar"
+            rename "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar", "PDPPluginManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config"
+            rename "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties", "PDPPluginManagerClient.properties"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar"
+            rename "pdp-plugin-manager-client-${versions.pdpPluginManager}.jar", "PDPPluginManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config"
+            rename "pdp-plugin-manager-client-properties-${versions.pdpPluginManager}.properties", "PDPPluginManagerClient.properties"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/jar"
+            rename "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar", "JWTSecretsManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-properties-${versions.jwtSecretsManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/embeddedpdp/jservice/config"
+            rename "pdp-jwtsecrets-manager-client-properties.${versions.jwtSecretsManager}.properties", "JWTSecretsManagerClient.properties"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/jar"
+            rename "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar", "JWTSecretsManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-properties-${versions.jwtSecretsManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/jbosspc/dpc/jservice/config"
+            rename "pdp-jwtsecrets-manager-client-properties.${versions.jwtSecretsManager}.properties", "JWTSecretsManagerClient.properties"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/jar"
+            rename "pdp-jwtsecrets-manager-client-${versions.jwtSecretsManager}.jar", "JWTSecretsManager-Plugin-client.jar"
+        }
+        copy {
+            from configurations.download.find { it.name == "pdp-jwtsecrets-manager-client-properties-${versions.jwtSecretsManager}.properties" }
+            into "${buildDir}/jpc/Policy_Controller_Java/dist/tomcat/dpc/jservice/config"
+            rename "pdp-jwtsecrets-manager-client-properties.${versions.jwtSecretsManager}.properties", "JWTSecretsManagerClient.properties"
+        }
+    }
+}
+
+task addTomcatResources(type: Zip) {
+    archiveFileName = "apache-tomcat-${versions.tomcat}.zip"
+    destinationDirectory = file("${buildDir}/jpc/extras")
+    from zipTree(file("${buildDir}/tomcat/apache-tomcat-${versions.tomcat}.zip"))
+    from ("${buildDir}/../resources/tomcat") {
+        into "apache-tomcat-${versions.tomcat}"
+    }
+}
+
+build.finalizedBy(copyJpcDependencies)
+copyJpcDependencies.finalizedBy(addTomcatResources)
+

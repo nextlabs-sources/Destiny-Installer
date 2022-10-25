@@ -1,0 +1,146 @@
+Summary: Blue Jungle Destiny File Server Enforcer
+Name: destiny-fse
+Version: 0.90
+Release: ___DATE___
+Vendor : Blue Jungle
+License: 2006 Blue Jungle Inc.
+Group: System Environment/Daemons
+URL: http://www.bluejungle.com/
+Packager: ___NAME___ <___EMAIL___@bluejungle.com>
+BuildRoot: ___BJROOT___/rpm/%{name}-%{version}-%{release}
+
+%description
+Destiny File Server allows organization to control their
+information flow by monitoring the file access activity
+and enforce with a centralized policy management server.
+
+%prep
+
+%build
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+# Java Runtime
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/
+tar -xzvf ___BJROOT___/linux/j2re1.4.2_11.tar.gz  --preserve -C $RPM_BUILD_ROOT/usr/local/bj/
+
+# BJ stuff
+
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/bin
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/config
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/config/security
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/etc
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/jlib
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/lib
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/drivers
+mkdir -p $RPM_BUILD_ROOT/usr/local/bj/logs
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
+mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
+
+# We should be explicit, to control what files really go into the product
+
+install -m 444 ___BJROOT___/linux/destiny-i386.conf                   $RPM_BUILD_ROOT/etc/ld.so.conf.d/
+install -m 555 ___BJROOT___/linux/bjfse-release                       $RPM_BUILD_ROOT/etc/rc.d/init.d/bjfse
+install -m 555 ___BJROOT___/release_bin/agentcontroller               $RPM_BUILD_ROOT/usr/local/bj/bin
+install -m 555 ___BJROOT___/release_bin/controlmodule                 $RPM_BUILD_ROOT/usr/local/bj/bin
+install -m 555 ___BJROOT___/release_bin/comp2ldif                     $RPM_BUILD_ROOT/usr/local/bj/bin
+install -m 555 ___BJROOT___/release_bin/smbDirMapping                 $RPM_BUILD_ROOT/usr/local/bj/bin
+install -m 555 ___BJROOT___/release_bin/elfchg                        $RPM_BUILD_ROOT/usr/local/bj/bin
+install -m 444 ___BJROOT___/config/agentprofile.xml                   $RPM_BUILD_ROOT/usr/local/bj/config/agentprofile.xml                
+install -m 444 ___BJROOT___/config/commprofile.template.xml           $RPM_BUILD_ROOT/usr/local/bj/config/commprofile.template.xml        
+install -m 666 ___BJROOT___/config/commprofile.xml                    $RPM_BUILD_ROOT/usr/local/bj/config/commprofile.xml                 
+install -m 444 ___BJROOT___/config/config.dat                         $RPM_BUILD_ROOT/usr/local/bj/config/config.dat                      
+install -m 444 ___BJROOT___/config/folder.info                        $RPM_BUILD_ROOT/usr/local/bj/config/folder.info                     
+install -m 444 ___BJROOT___/config/mapping.xml                        $RPM_BUILD_ROOT/usr/local/bj/config/mapping.xml                     
+install -m 444 ___BJROOT___/config/security/temp_agent-keystore.jks   $RPM_BUILD_ROOT/usr/local/bj/config/security/temp_agent-keystore.jks
+install -m 444 ___BJROOT___/release_drivers/bj_core.ko                $RPM_BUILD_ROOT/usr/local/bj/drivers/bj_core.ko
+install -m 444 ___BJROOT___/release_drivers/bj_kthread.ko             $RPM_BUILD_ROOT/usr/local/bj/drivers/bj_kthread.ko
+install -m 444 ___BJROOT___/release_drivers/Detours.ko                $RPM_BUILD_ROOT/usr/local/bj/drivers/Detours.ko
+install -m 444 ___BJROOT___/release_drivers/Disasm.ko                 $RPM_BUILD_ROOT/usr/local/bj/drivers/Disasm.ko
+install -m 444 ___BJROOT___/release_drivers/pep_vfs.ko                $RPM_BUILD_ROOT/usr/local/bj/drivers/pep_vfs.ko
+install -m 444 ___BJROOT___/release_drivers/bj_sysl.ko                $RPM_BUILD_ROOT/usr/local/bj/drivers/bj_sysl.ko
+install -m 444 ___BJROOT___/etc/agent.logging.properties.release      $RPM_BUILD_ROOT/usr/local/bj/etc/agent.logging.properties
+install -m 555 ___BJROOT___/release_lib/libbjproxy.so                 $RPM_BUILD_ROOT/usr/local/bj/lib
+install -m 555 ___BJROOT___/release_lib/libIPCJNI.so                  $RPM_BUILD_ROOT/usr/local/bj/lib
+install -m 555 ___BJROOT___/release_lib/libbjbrain.so                 $RPM_BUILD_ROOT/usr/local/bj/lib
+install -m 555 ___BJROOT___/release_lib/libbjinj.so                   $RPM_BUILD_ROOT/usr/local/bj/lib
+install -m 444 ___BJROOT___/jlib/agent-controlmanager.jar             $RPM_BUILD_ROOT/usr/local/bj/jlib/agent-controlmanager.jar 
+install -m 444 ___BJROOT___/jlib/common-domain.jar                    $RPM_BUILD_ROOT/usr/local/bj/jlib/common-domain.jar        
+install -m 444 ___BJROOT___/jlib/common-domain-types.jar              $RPM_BUILD_ROOT/usr/local/bj/jlib/common-domain-types.jar  
+install -m 444 ___BJROOT___/jlib/common-framework.jar                 $RPM_BUILD_ROOT/usr/local/bj/jlib/common-framework.jar     
+install -m 444 ___BJROOT___/jlib/common-framework-types.jar           $RPM_BUILD_ROOT/usr/local/bj/jlib/common-framework-types.jar     
+install -m 444 ___BJROOT___/jlib/common-oil.jar                       $RPM_BUILD_ROOT/usr/local/bj/jlib/common-oil.jar
+install -m 444 ___BJROOT___/jlib/server-base.jar                      $RPM_BUILD_ROOT/usr/local/bj/jlib/server-base.jar          
+install -m 444 ___BJROOT___/jlib/common-pf.jar                        $RPM_BUILD_ROOT/usr/local/bj/jlib/common-pf.jar            
+install -m 444 ___BJROOT___/jlib/management-types.jar                 $RPM_BUILD_ROOT/usr/local/bj/jlib/management-types.jar     
+install -m 444 ___BJROOT___/jlib/agent-types.jar                      $RPM_BUILD_ROOT/usr/local/bj/jlib/agent-types.jar          
+install -m 444 ___BJROOT___/jlib/agent-common.jar                     $RPM_BUILD_ROOT/usr/local/bj/jlib/agent-common.jar         
+install -m 444 ___BJROOT___/jlib/dabs-common-services.jar             $RPM_BUILD_ROOT/usr/local/bj/jlib/dabs-common-services.jar 
+install -m 444 ___BJROOT___/jlib/dabs-agent-services.jar              $RPM_BUILD_ROOT/usr/local/bj/jlib/dabs-agent-services.jar  
+install -m 444 ___BJROOT___/jlib/log-types.jar                        $RPM_BUILD_ROOT/usr/local/bj/jlib/log-types.jar            
+install -m 444 ___BJROOT___/jlib/agent-ipc.jar                        $RPM_BUILD_ROOT/usr/local/bj/jlib/agent-ipc.jar            
+install -m 444 ___BJROOT___/jlib/client-pf.jar                        $RPM_BUILD_ROOT/usr/local/bj/jlib/client-pf.jar            
+install -m 444 ___BJROOT___/jlib/dcsf-types.jar                       $RPM_BUILD_ROOT/usr/local/bj/jlib/dcsf-types.jar           
+install -m 444 ___BJROOT___/jlib/policy-types.jar                     $RPM_BUILD_ROOT/usr/local/bj/jlib/policy-types.jar         
+install -m 444 ___BJROOT___/jlib/deployment-types.jar                 $RPM_BUILD_ROOT/usr/local/bj/jlib/deployment-types.jar     
+install -m 444 ___BJROOT___/jlib/server-shared-types.jar              $RPM_BUILD_ROOT/usr/local/bj/jlib/server-shared-types.jar  
+install -m 444 ___BJROOT___/jlib/common-version.jar                   $RPM_BUILD_ROOT/usr/local/bj/jlib/common-version.jar
+install -m 444 ___BJROOT___/jlib/version-types.jar                    $RPM_BUILD_ROOT/usr/local/bj/jlib/version-types.jar
+install -m 444 ___BJROOT___/jlib/version.jar                          $RPM_BUILD_ROOT/usr/local/bj/jlib/version.jar
+install -m 444 ___BJROOT___/jlib/crypt.jar                            $RPM_BUILD_ROOT/usr/local/bj/jlib/crypt.jar
+install -m 444 ___BJROOT___/jlib/antlr.jar                            $RPM_BUILD_ROOT/usr/local/bj/jlib/antlr.jar
+install -m 444 ___BJROOT___/jlib/axis.jar                             $RPM_BUILD_ROOT/usr/local/bj/jlib/axis.jar
+install -m 444 ___BJROOT___/jlib/commons-logging.jar                  $RPM_BUILD_ROOT/usr/local/bj/jlib/commons-logging.jar
+install -m 444 ___BJROOT___/jlib/castor-0.9.5.4.jar                   $RPM_BUILD_ROOT/usr/local/bj/jlib/castor-0.9.5.4.jar
+install -m 444 ___BJROOT___/jlib/jaxrpc.jar                           $RPM_BUILD_ROOT/usr/local/bj/jlib/jaxrpc.jar
+install -m 444 ___BJROOT___/jlib/xercesImpl.jar                       $RPM_BUILD_ROOT/usr/local/bj/jlib/xercesImpl.jar
+install -m 444 ___BJROOT___/jlib/xmlParserAPIs.jar                    $RPM_BUILD_ROOT/usr/local/bj/jlib/xmlParserAPIs.jar
+install -m 444 ___BJROOT___/jlib/commons-discovery-0.2.jar            $RPM_BUILD_ROOT/usr/local/bj/jlib/commons-discovery-0.2.jar
+install -m 444 ___BJROOT___/jlib/saaj.jar                             $RPM_BUILD_ROOT/usr/local/bj/jlib/saaj.jar
+install -m 444 ___BJROOT___/jlib/wsdl4j-1.5.1.jar                     $RPM_BUILD_ROOT/usr/local/bj/jlib/wsdl4j-1.5.1.jar
+install -m 444 ___BJROOT___/jlib/ehcache-1.1.jar                      $RPM_BUILD_ROOT/usr/local/bj/jlib/ehcache-1.1.jar
+install -m 444 ___BJROOT___/jlib/commons-collections-2.1.1.jar        $RPM_BUILD_ROOT/usr/local/bj/jlib/commons-collections-2.1.1.jar
+install -m 444 ___BJROOT___/jlib/junit.jar                            $RPM_BUILD_ROOT/usr/local/bj/jlib/junit.jar
+install -m 444 ___BJROOT___/jlib/activation.jar                       $RPM_BUILD_ROOT/usr/local/bj/jlib/activation.jar
+install -m 444 ___BJROOT___/jlib/mail.jar                             $RPM_BUILD_ROOT/usr/local/bj/jlib/mail.jar                        
+
+%post
+ldconfig
+chkconfig --add bjfse
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%preun
+touch /usr/local/bj/bin/testun >& /dev/null
+if [ $? -ne 0 ]; then 
+  exit 1;
+fi
+chkconfig --del bjfse
+
+# Clean up the files so that nothing left behind
+%postun
+ldconfig
+if [ -f /usr/local/bj/bin/.smbd.bjbak ] ; then
+  cp -f /usr/local/bj/bin/.smbd.bjbak /usr/sbin/smbd 
+fi
+rmmod bj_sysl >& /dev/null
+rmmod pep_vfs >& /dev/null
+rmmod Detours >& /dev/null
+rmmod Disasm >& /dev/null
+rmmod bj_core >& /dev/null
+rmmod bj_kthread >& /dev/null
+rm -rf /usr/local/bj
+rm -f /dev/bj_sysl
+
+%files
+%defattr(-,root,root,-)
+/etc/ld.so.conf.d/destiny-i386.conf
+/etc/rc.d/init.d/bjfse
+/usr/local/bj
+
+%doc
+
+%changelog
+

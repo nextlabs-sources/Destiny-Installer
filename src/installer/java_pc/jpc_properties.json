@@ -1,0 +1,88 @@
+{
+  /*
+    Application Server Name/IP (tomcat/jboss server hostname or IP)
+  */
+  "server_ip" : "localhost",
+  /*
+    Application Server Port
+  */
+  "server_port" : "8080",
+  /*
+    "JBOSS" - jboss-eap-6,
+    "TOMCAT" - Apache Tomcat
+    should be in all UPPER CASE
+  */ 
+  "server_type" : "TOMCAT",
+
+  /* Specify your agent type, values : PORTAL */
+  "agent_type" : "PORTAL",
+
+  /* Java Policy Controller Configurations */
+  /* Policy Controller server host */
+  "policy_controller_host" : "jpc_host",
+  /* Policy Controller Port */
+  "policy_controller_port" : "8443",
+  /*
+    ICENet server (Control Center Server) host to which Java Policy Controller would connect
+  */
+  "cc_host" : "",
+  /*
+    ICENet server port to which Java Policy Controller  would connect
+  */
+  "cc_port" : "8443",
+
+  /*
+    The Drive root containing the Application Server
+	For linux, you can get this value by using command `df ${installation_dir}`
+	For windows, the value is C: or D: etc
+    e.g.  For windows: C: 
+          For linux: /dev/sda1
+  */
+  "drive_root_dir" : "/dev/sda1",
+  /*
+    The installation dir is where the server is installed
+
+    For tomcat, the path should be exactly $CATALINA_HOME/nextlabs (and the folder must exist before installation)
+    
+    For JBoss, the path should be the jboss home itself
+    Must use unix style path separator (forward slash /).
+    e.g.  For tomcat in windows: C:/Program Files/apache-tomcat-8.5.xx/nextlabs
+          For tomcat in linux: /opt/apache-tomcat-8.5.xx/nextlabs
+          For jboss in windows: C:/Program Files/jboss-eap-6.2
+          For jboss in linux: /opt/jboss-eap-6.2
+  */
+  "installation_dir" : "/usr/share/tomcat/nextlabs",
+
+  /*
+    DPC folder path for Java Policy Controller
+    Must use unix style path separator (forward slash /).
+
+    For tomcat type installation, dpc_path should be inside installation dir (no need to be exist before installation)
+    e.g.  For tomcat in windows:  C:/Program Files/apache-tomcat-8.5.xx/nextlabs/dpc
+          For tomcat in linux: /opt/apache-tomcat-8.5.xx/nextlabs/dpc
+    
+    For jboss type installation, dpc_path can be anywhere but the parent folder of dpc must exist before installation
+    e.g.  For jboss in windows: C:/Program Files/Nextlabs/JavaPolicyController/dpc
+          For jboss in linux: /opt/Nextlabs/JavaPolicyController/dpc
+  */
+  "dpc_path" : "/usr/share/tomcat/nextlabs/dpc",
+
+  /*
+    JBOSS required configurations, values: standalone
+  */
+  "jboss_installation_type" : "standalone",
+  
+  /*
+    Temporary directory for copying and preparing installation artifacts
+    Must exist before the installation starts
+    Must use unix style path separator (forward slash /).
+    e.g.  For windows: C:/Temp
+          For linux: /tmp
+  */
+  "temp_dir" : "/tmp",
+
+  /* System Configuration, Do not change any of the following */
+  "required_disk_space_mb" : 250,
+  "version_number": "@jpc_version@",
+  "built_date" : "@built_date@"
+}

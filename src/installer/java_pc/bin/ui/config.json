@@ -1,0 +1,19 @@
+{
+	"defaults": {
+		"server_ip": "localhost",
+		"server_port": "8443",
+		"server_type": "TOMCAT",
+		"policy_controller_host": "",
+		"policy_controller_port": "8443",
+		"cc_host": "",
+		"cc_port": "8443",
+		"installation_dir": ""
+	},
+	"defaults_win": {
+		"temp_dir": "C:/temp"
+	},
+	"defaults_linux": {
+		"temp_dir": "/tmp"
+	},
+	"required_disk_space_mb": 250
+}

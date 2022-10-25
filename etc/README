@@ -1,0 +1,22 @@
+These two files go under tomcat/conf, replacing the original files. The changes are as follows:
+
+catalina.properties
+===================
+Files added to shared.loader:
+shared.loader="${catalina.home}/shared/lib", "${catalina.home}/shared/lib/*.jar"
+
+Files added to tomcat.util.scan.StandardJarScanFilter.jarsToSkip:
+common-*.jar,\
+server-*.jar,\
+crypt.jar,\
+policy-*.jar,\
+secure-session.jar,
+
+
+web.xml
+=======
+Added to "The mappings for the JSP servlet"
+        <url-pattern>*.jspf</url-pattern>
+
+
+If these files change with future versions of tomcat, please update them here

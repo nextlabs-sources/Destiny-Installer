@@ -1,0 +1,31 @@
+[Unit]
+Description=NextLabs Compliance Enterprise Service
+Requires=<%= @depends_on%>.service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+Restart=always
+RestartSec=10
+User=<%= @server_user %>
+Group=<%= @server_group %>
+UMask=0007
+
+Environment="JAVA_HOME=<%= @install_home %>/java/jre"
+Environment="JRE_HOME=<%= @install_home %>/java/jre"
+Environment="CATALINA_HOME=<%= @install_home %>/server/tomcat"
+Environment="CATALINA_TMP=<%= @install_home %>/server/tomcat/temp"
+Environment="CATALINA_BASE=<%= @install_home %>/server/tomcat"
+Environment="CATALINA_PID=<%= @pid_file %>"
+Environment="TOMCAT_USER=<%= @server_user %>"
+Environment="SERVER_XML=<%= @install_home %>/server/configuration/server.xml"
+Environment="JAVA_ENDORSED_DIRS=<%= @install_home %>/server/tomcat/common/endorsed"
+Environment="JAVA_OPTS=<%= @jvm_memory_opts %> -Dsun.lang.ClassLoader.allowArraySyntax=true -Xverify:none -Dorg.apache.commons.logging.Log=org.apache.commons.logging.impl.Jdk14Logger <%= @java_opts %>"
+Environment="CLASSPATH=<%= @install_home %>/server/tomcat/shared/lib/nxl-filehandler.jar"
+
+ExecStart=<%= @install_home %>/server/tomcat/bin/startup.sh -config "<%= @install_home %>/server/configuration/server.xml"
+
+ExecStop=<%= @install_home %>/server/tomcat/bin/shutdown.sh -force
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,117 @@
+{
+  /*
+    The installation destination folder, which must be present before the installation begins. Control Center will be installed in a sub folder named "PolicyServer" under the destination folder. Specify the folder using UNIX style path separators. For example:
+    For Windows: C:/Program Files/Nextlabs
+    For Linux: /opt/Nextlabs
+  */
+  "installation_dir" : "",
+  /* The type of action being performed: install , upgrade, or remove. */
+  "installation_mode" : "install",
+  /*
+    The console installation mode
+    Console Mode (Web-based Policy Studio): OPN
+    SAAS Mode: SAAS
+  */
+  "console_install_mode": "OPN",
+  /*
+    The location of the license file. Specify the location using UNIX style path separators. For example:
+     For Windows: C:/Users/Administrator/Desktop/license.dat
+     For Linux: /root/license.dat
+  */
+  "license_file_location" : "",
+  /* The super user password for the built-in Administrator account used by all Control Center server applications. */
+  "admin_user_password" : "",
+  /* The Trust Store password for the Control Center server. */
+  "trust_store_password" : "",
+  /* The Key Store password for the Control Center server. */
+  "key_store_password" : "",
+  /*The type of installation: complete or custom.
+    For a complete installation, set all 9 components to ON.
+    For a custom installation, choose one of two modes:
+    1. All components except ICENet Server and Key Management Server: Set dabs_component and dkms_component to OFF. Set all other components to on.
+    2. Only ICENet Server and Key Management Server: Set dabs_component and dkms_component to ON. Set all other components to off.
+  */
+  "installation_type" : "complete",
+  "dms_component" : "ON",              /* Management Server */
+  "dac_component" : "ON",              /* Intelligence Server */
+  "dps_component" : "ON",              /* Policy Management Server */
+  "dem_component" : "ON",              /* Enrollment Manager */
+  "admin_component" : "ON",            /* Administrator */
+  "reporter_component" : "ON",         /* Reporter */
+  "dabs_component" : "ON",             /* ICENet Server */
+  "dkms_component" : "ON",             /* Key Management Server */
+  "cc_console_component" : "ON",       /* Control Center Console */
+  /* The following two properties are for custom installations with only ICENet Server and Key Management Server. */
+  /*
+    The hostname of the management server, which is another Control Center host with all components except ICENet Server and Key Management Server installed.
+  */
+  "installed_cc_host" : "",
+  /*
+    The web service port number of another Control Center host which has all components except ICENet Server and Key Management Server installed.
+  */
+  "installed_cc_port" : "",
+
+  /* The type of database being accessed, such as MSSQL or ORACLE*/
+  "database_type" : "MSSQL",
+  /*
+    The database server details. Leave this empty if installing only the ICENet Server and Key Management Server.
+  */
+  /*
+    The database connection string. For example:
+      For MSSQL:               sqlserver://<hostname>:1433;databaseName=<db_name>
+      For MSSQL_SSL:           sqlserver://<hostname>:1433;databaseName=<db_name>;integratedSecurity=false;encrypt=true;trustServerCertificate=true
+      For MSSQL_SSL_VALIDATE:  sqlserver://<hostname>:1433;databaseName=<db_name>;integratedSecurity=false;encrypt=true;trustServerCertificate=false;hostNameInCertificate=<host_dn>
+      For ORACLE:              oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=<hostname>)(PORT=1521))(CONNECT_DATA=(SID=<db_name>)))
+      For ORACLE_SSL:          oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=<hostname>)(PORT=1521))(CONNECT_DATA=(SID=<db_name>)))
+      For ORACLE_SSL_VALIDATE: oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=<hostname>)(PORT=1521))(CONNECT_DATA=(SID=<db_name>))(SECURITY=(SSL_SERVER_CERT_DN=\"<host_dn>\")))
+  */
+  "db_connection_url" : "",
+  "db_username" : "",
+  "db_password" : "",
+  "db_ssl_certificate" : "",
+  "db_validate_server_dn" : "false",
+
+  /* The web service port number. */
+  "web_service_port" : "8443",
+  /*
+    The web application port number. If installing only the ICENet Server and Key Management Server, this port number must match the port number of the Control Center host with all components except ICENet Server and Key Management Server installed.
+  */
+  "web_application_port" : "443",
+  /* The configuration service port number. */
+  "config_service_port" : "7443",
+  /* Web Shutdown port (no need to change) */
+  "web_shutdown_port" : "8005",
+
+  /*
+    Data transportation
+  */
+  /* Transportation mode  
+     For PLAIN: Plain text import/export. No signature and shared key require
+     For SANDE: Signed and Encrypted import/export. Payload will be signed and encrypted  
+  */
+  "data_transportation_mode" : "PLAIN",
+  /* Shared key to encrypt and decrypt payload 
+     Only required if data_transportation_mode = SANDE
+  */
+  "data_transportation_shared_key" : "",
+  /* Flag to determine if plain text import is allowed */
+  "data_transportation_plain_text_import" : "false",
+  /* Flag to determine if plain text export is allowed */
+  "data_transportation_plain_text_export" : "false",
+  
+  /*
+    The mail server configuration (optional). Not required if installing only the ICENet Server and Key Management Server.
+  */
+  "mail_server_url" : "",
+  "mail_server_port" : "25",
+  "mail_server_username" : "",
+  "mail_server_password" : "",
+  "mail_server_from" : "",
+  "mail_server_to" : "",
+  /*
+    The temporary directory used for copying and preparing installation artifacts. This directory must exist before the installation begins. Specify the folder using UNIX style path separators. For example:
+          For Windows: C:/Temp
+          For Linux: /tmp
+  */
+  "temp_dir" : ""
+}

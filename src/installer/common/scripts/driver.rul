@@ -1,0 +1,185 @@
+#include "..\..\common\scripts\driver.h"
+#include "..\..\common\scripts\common.h"
+
+#ifndef DRIVER_IMPL
+
+////////////////////////////////////////////////////////////////////////////
+// Installs a driver on the system
+// startType : 3 (demand start)
+// service name : internal name of the driver service
+// pathName : path to the driver file
+// returns : 0 if success, 1 if already exists, 2 if failed to install
+////////////////////////////////////////////////////////////////////////////
+function INT InstallDriverFile (hMSI, startType, serviceName, pathName, dependency)
+begin
+	return InstallDriverFileWithGroup(hMSI, startType, serviceName, pathName, dependency, "");
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Installs a driver on the system
+// startType : 3 (demand start)
+// service name : internal name of the driver service
+// pathName : path to the driver file 
+// loadOrderingGroup: load ordering group
+// returns : 0 if success, 1 if already exists, 2 if failed to install
+////////////////////////////////////////////////////////////////////////////
+function INT InstallDriverFileWithGroup(hMSI, startType, serviceName, pathName, dependency, loadOrderingGroup)
+	INT iResult;
+	WSTRING sResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = InstallDriver(startType, serviceName, pathName, dependency, loadOrderingGroup);
+   if (iResult != ERROR_SUCCESS) then
+   		NumToStr(sResult, iResult);
+   		WriteToLogFile(hMSI, "Error when installing driver : '" + pathName + "'. Error is " + sResult);
+   endif;
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Removes a driver from the system
+// service name : internal name of the driver service
+// returns : 0 if success, 
+//           1 if already exists
+//			 2 if failed to uninstall
+//			 3 if driver cannot be stopped
+////////////////////////////////////////////////////////////////////////////
+function INT RemoveDriverFile (hMSI, serviceName)
+	INT iResult;
+	WSTRING sResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = RemoveDriver(serviceName);
+   if (iResult != ERROR_SUCCESS) then
+		NumToStr(sResult, iResult);
+		WriteToLogFile(hMSI, "Error when removing driver : '" + serviceName + "'. Error is " + sResult);
+   endif;
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Repairs a driver on the system by uninstalling / reinstalling it
+// startType : 3 (demand start)
+//			   2 (system start)
+//			   1 (early system start)
+//			   0 (boot start),
+// service name : internal name of the driver service
+// pathName : path to the driver file
+// returns : 0 if success, 1 if already exists, 2 if failed to install
+////////////////////////////////////////////////////////////////////////////
+function INT RepairDriverService (hMSI, startType, serviceName, pathName, dependency)
+begin                                                                                
+	return RepairDriverServiceWithGroup(hMSI, startType, serviceName, pathName, dependency, "");
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Repairs a driver on the system by uninstalling / reinstalling it
+// startType : 3 (demand start)
+//			   2 (system start)
+//			   1 (early system start)
+//			   0 (boot start),
+// service name : internal name of the driver service
+// pathName : path to the driver file 
+// loadOrderingGroup: load ordering group
+// returns : 0 if success, 1 if already exists, 2 if failed to install
+////////////////////////////////////////////////////////////////////////////
+function INT RepairDriverServiceWithGroup (hMSI, startType, serviceName, pathName, dependency, loadOrderingGroup)
+	int iResult;
+	WSTRING sResult;
+begin  
+   LoadInstallerCommonDLL(hMSI);
+   //Stop, but ignore return code (may not be running, may be broken)
+   iResult = StopDriver(serviceName);
+   //NumToStr(sResult, iResult);
+   //MessageBox(sResult, INFORMATION);
+   iResult = RemoveDriver(serviceName);
+   //NumToStr(sResult, iResult);
+   //MessageBox(sResult, INFORMATION);
+   iResult = InstallDriver(startType, serviceName, pathName, dependency, loadOrderingGroup);
+   //NumToStr(sResult, iResult);
+   //MessageBox(sResult, INFORMATION);
+   iResult = StartDriver(serviceName);
+   //NumToStr(sResult, iResult);
+   //MessageBox(sResult, INFORMATION);
+   UnloadInstallerCommonDLL(hMSI);               
+   return ERROR_SUCCESS;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Starts an installed driver
+// service name : internal name of the driver service
+// returns : 0 if success, 
+//           1 if driver does not exists
+//			 2 if failed to start
+////////////////////////////////////////////////////////////////////////////
+function INT StartDriverService (hMSI, serviceName)
+	INT iResult;
+	WSTRING sResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = StartDriver(serviceName);
+   if (iResult != ERROR_SUCCESS) then
+		NumToStr(sResult, iResult);
+		WriteToLogFile(hMSI, "Error when starting driver : '" + serviceName + "'. Error is " + sResult);
+   endif;
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+
+////////////////////////////////////////////////////////////////////////////
+// Stops an installed driver
+// service name : internal name of the driver service
+// returns : 0 if success, 
+//           1 if driver does not exist
+//			 2 if failed
+//			 3 if driver cannot be stopped
+////////////////////////////////////////////////////////////////////////////
+function INT StopDriverService (hMSI, serviceName)
+	INT iResult;
+	WSTRING sResult;
+begin
+   LoadInstallerCommonDLL(hMSI);
+   iResult = StopDriver(serviceName);
+   if (iResult != ERROR_SUCCESS) then
+		NumToStr(sResult, iResult);
+		WriteToLogFile(hMSI, "Error when stopping driver : '" + serviceName + "'. Error is " + sResult);
+   endif;
+   UnloadInstallerCommonDLL(hMSI);               
+   return iResult;
+end;
+          
+////////////////////////////////////////////////////////////////////////////
+// Removes the install registry for driver
+// returns : 0 if success
+////////////////////////////////////////////////////////////////////////////
+function INT RemoveDriverRegistry (hMSI)
+	INT iResult;
+	WSTRING sResult;   
+	WSTRING keyName;
+begin
+    RegDBSetDefaultRoot ( HKEY_LOCAL_MACHINE );  
+	keyName = "System\\CurrentControlSet\\Services\\dscore";
+	iResult = RegDBDeleteKey (keyName);      
+	if (iResult != ERROR_SUCCESS) then
+	 	NumToStr(sResult, iResult);
+		WriteToLogFile(hMSI, "Error when removing registry : dscore. Error is " + sResult);                              
+	else                               
+		RegDBSetDefaultRoot ( HKEY_LOCAL_MACHINE );  
+		keyName = "System\\CurrentControlSet\\Services\\dsifsflt";
+		iResult = RegDBDeleteKey (keyName);     
+		if (iResult != ERROR_SUCCESS) then
+			NumToStr(sResult, iResult);
+			WriteToLogFile(hMSI, "Error when removing registry : dsifsflt. Error is " + sResult);                              
+		endif;
+	endif;	
+	return iResult; 
+end;
+                    
+#endif
+#define DRIVER_IMPL
+
+
+
+

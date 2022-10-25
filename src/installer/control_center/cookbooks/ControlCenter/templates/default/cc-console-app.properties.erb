@@ -1,0 +1,70 @@
+#------------------------------------------------------------------------------------------#
+#                                                                                          #
+#                              Control Center Console                                      #
+#                                                                                          #
+#                             Application   Properties                                     #
+#------------------------------------------------------------------------------------------#
+
+application.version=<%= @version_number %>-<%= @build_number %>
+help.content.dir.path=<%= @help_content_dir_path %>
+policy.exports.file.location=<%= @policy_exports_file_location %>
+server.license.dir=<%= @server_license_dir %>
+server.log.queue.dir.path=<%= @server_log_queue_dir_path %>
+
+# Database configurations
+db.url=<%= @db_connection_string %>
+db.username=<%= @db_username %>
+db.password=<%= @db_encrypted_password %>
+
+db.driver=<%= @db_driver %>
+db.max.poolsize=10
+db.hibernate.dialect=<%= @db_dialect %>
+db.hibernate.show.sql=true
+db.hibernate.ddl.auto=
+
+
+# Search data configurations
+search.engine.cluster.name=<%= @es_cluster_name %>
+search.engine.host=<%= @es_host %>
+search.engine.port=<%= @es_port %>
+search.engine.local=<%= @es_is_local %>
+#search.engine.local.home=./data/cc-data-cluster
+
+# CAS service configurations
+app.service.security=https://<%= @host %>:<%= @web_application_port %>/console/login/cas
+app.service.home=https://<%= @host %>:<%= @web_application_port %>/console/
+cas.service.login=https://<%= @host %>:<%= @web_application_port %>/cas/login
+cas.service.logout=https://<%= @host %>:<%= @web_application_port %>/cas/logout
+cas.service.url=https://<%= @host %>:<%= @web_application_port %>/cas/
+
+# Data transportation configurations
+# Default: PLAIN
+# Possible values: PLAIN, SANDE
+data.transportation.mode=<%= @data_transportation_mode %>
+# Properties below only applicable if data.transportation.mode is SANDE
+# Shared key is an encrypted 44 bytes long key for AES-256
+data.transportation.shared.key=<%= @data_transportation_encrypted_shared_key %>
+# Allow import plain text data
+# Default: false
+data.transportation.allow.plain.text.import=<%= @data_transportation_plain_text_import %>
+# Allow export plain text data
+# Default: false
+data.transportation.allow.plain.text.export=<%= @data_transportation_plain_text_export %>
+
+# Full path to the key store file
+data.transportation.keystore.file=<%= @data_transportation_keystore_file %>
+# Possible value for data.transportation.keystore.type are JKS
+data.transportation.keystore.type=JKS
+# Encrypted password generated using Nextlabs encryption tool for accessing the key store
+data.transportation.keystore.password=<%= @data_transportation_encrypted_keystore_password %>
+
+# Date formats
+mm.dd.yyyy=MM/dd/yyyy
+
+# Application user account password history enforcement
+# Default: 5, 0: Disabled
+enforce.password.history=5
+
+# Specifies the maximum size permitted for uploaded files. The default is 1MB.
+spring.servlet.multipart.max-file-size=100MB
+spring.servlet.multipart.max-request-size=100MB

@@ -1,0 +1,144 @@
+<project name="build_xlib" default="all" basedir="..">
+
+	<!-- Properties -->
+
+    <!-- these are the files that installer requires from xlib directly -->
+    <!-- ResourcePathDiscovery.exe
+         xalan-c_1_10.dll
+         xalanmessages_1_10.dll
+         xerces-c_2_7.dll
+         databasetester32.dll
+         postgrestester.exe
+    -->
+         
+	<property name="nlbuildroot" location="${basedir}"/>
+
+	<property file="${nlbuildroot}/scripts/build.properties" />
+	<property file="${nlbuildroot}/src/build-scripts/etc/build.properties" />
+
+	<!-- Dump properties -->
+	<echoproperties />
+
+	<echo message="INFO: Dump properties completed" />
+
+	<!-- Sanity checks -->
+	<fail message="external.dir is not set" unless="external.dir" />
+	<fail message="external.dir is empty">
+		<condition>
+			<equals arg1="${external.dir}" arg2="" trim="true" />
+		</condition>
+	</fail>
+	<available file="${external.dir}" type="dir" property="local.external.dir_exists" />
+	<fail message="external.dir directory does not exist - ${external.dir}" unless="local.external.dir_exists" />
+
+	<echo message="INFO: Sanity check completed (no error)" />
+
+	<!-- Targets-->
+	<target name="all" depends="clean, prepare_fate_x86, prepare_fate_x64, prepare_installer_x86, prepare_external_x86, prepare_external_java, prepare_platform_java_and_data_files" />
+
+	<target name="prepare_fate_x86">
+		<mkdir dir="${xlib_bin32_dir}" />
+
+		<!-- Extract files -->
+		<unzip src="${xlib_fate_build_artifacts_bin_zip_file}" dest="${xlib_bin32_dir}" overwrite="yes">
+			<patternset>
+				<include name="bin/release_win_x86/ResourcePathDiscovery.exe" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+
+		<!-- Check if file exists
+		Notes: Currently, Unzip task or ZipFileSet does not have a way to report error if a file
+		cannot be found in a zip file. In addition, there is no simple way to check if a file
+		exists in Ant. We can call out to Bash to check if a file exists, but that creates an
+		unnecessary dependency on Bash. In the following, we try to check if a file exist using
+		a fake move. Doing this, an error will be generated if a file does not exist.
+		-->
+		<move file="${xlib_bin32_dir}/ResourcePathDiscovery.exe" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" />
+	</target>
+
+	<target name="prepare_fate_x64">
+		<mkdir dir="${xlib_bin64_dir}" />
+
+		<!-- Extract files -->
+		<unzip src="${xlib_fate_build_artifacts_bin_zip_file}" dest="${xlib_bin64_dir}" overwrite="yes">
+			<patternset>
+				<include name="bin/release_win_x64/ResourcePathDiscovery.exe" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+
+		<!-- Check if file exists
+		Notes: Currently, Unzip task or ZipFileSet does not have a way to report error if a file
+		cannot be found in a zip file. In addition, there is no simple way to check if a file
+		exists in Ant. We can call out to Bash to check if a file exists, but that creates an
+		unnecessary dependency on Bash. In the following, we try to check if a file exist using
+		a fake move. Doing this, an error will be generated if a file does not exist.
+		-->
+		<move file="${xlib_bin64_dir}/ResourcePathDiscovery.exe" todir="${xlib_bin64_dir}" preservelastmodified="true" overwrite="false" />
+	</target>
+
+	<target name="prepare_installer_x86">
+		<mkdir dir="${xlib_bin32_dir}" />
+
+		<!-- Extract files -->
+		<unzip src="${xlib_installer_build_artifacts_xlib_bin_zip_file}" dest="${xlib_bin32_dir}" overwrite="yes">
+			<patternset>
+				<include name="bin/release_win_x86/DatabaseTester32.dll" />
+				<include name="bin/release_win_x86/PostgresTester.exe" />
+			</patternset>
+			<mapper type="flatten" />
+		</unzip>
+
+		<!-- Check if file exists
+		Notes: Currently, Unzip task or ZipFileSet does not have a way to report error if a file
+		cannot be found in a zip file. In addition, there is no simple way to check if a file
+		exists in Ant. We can call out to Bash to check if a file exists, but that creates an
+		unnecessary dependency on Bash. In the following, we try to check if a file exist using
+		a fake move. Doing this, an error will be generated if a file does not exist.
+		-->
+		<move file="${xlib_bin32_dir}/DatabaseTester32.dll" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" />
+		<move file="${xlib_bin32_dir}/PostgresTester.exe" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" />
+	</target>
+
+	<target name="prepare_external_x86">
+		<mkdir dir="${xlib_bin32_dir}" />
+		<copy file="${external.dir}/xalan/Xalan-C_1_10_0-win32-msvc_60/bin/Xalan-C_1_10.dll" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/xalan/Xalan-C_1_10_0-win32-msvc_60/bin/XalanMessages_1_10.dll" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/xerces/xerces-c-2.8.0-windows_2000-msvc_60/bin/xerces-c_2_7.dll" todir="${xlib_bin32_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+	</target>
+
+	<target name="clean">
+        <delete dir="${build.root.dir}"/>
+		<delete dir="${xlib_dir}" />
+	</target>
+
+    <target name="make_build_dir">
+        <mkdir dir="${build.root.dir}"/>
+    </target>
+    
+	<target name="prepare_external_java">
+		<mkdir dir="${xlib_jar_dir}" />
+		<copy file="${external.dir}/antlr/antlr-2.7.4/antlr.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/axis/axis2-1.7.9/lib/activation-1.1.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/axis/axis2-1.7.9/lib/axiom-api-1.2.21.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/axis/axis2-1.7.9/lib/axis2-adb-1.7.9.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/axis/axis2-1.7.9/lib/axis2-kernel-1.7.9.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/axis/axis2-1.7.9/lib/commons-io-2.1.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/bouncycastlejce/bcprov-jdk15on/bcprov-jdk15on-1.62.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/castor/castor0.9.5.4/castor-0.9.5.4.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/commons-logging/commons-logging-1.2/commons-logging-1.2.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/jakarta-regexp/jakarta-regexp-1.3/jakarta-regexp-1.3.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/jsf/jsf-1_1_01/lib/commons-logging.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+		<copy file="${external.dir}/xerces/xerces-2_11_0/xercesImpl.jar" todir="${xlib_jar_dir}" preservelastmodified="true" overwrite="false" verbose="true" />
+    </target>
+    
+	<target name="prepare_platform_java_and_data_files" depends="make_build_dir">
+        <!-- Right now we take everything -->
+        <unzip src="${xlib_destiny_base_build_artifacts_zip_file}" dest="${build.root.dir}" overwrite="yes"/>
+    </target>
+    
+	<target name="prepare_server_apps_java_and_data_files" depends="make_build_dir">
+        <unzip src="${xlib_destiny_server_apps_build_artifacts_zip_file}" dest="${build.root.dir}" overwrite="yes"/>
+    </target>
+</project>

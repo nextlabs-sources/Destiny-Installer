@@ -1,0 +1,1 @@
+default['enable_jwt_filter'] = true

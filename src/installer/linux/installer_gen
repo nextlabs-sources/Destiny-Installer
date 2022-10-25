@@ -1,0 +1,80 @@
+#!/bin/sh
+
+# This script puts the final touch of the installer
+# Concatenating the RPM and make it installable
+
+if [ ! -n "$BJROOT" ] ; then
+    echo "\$BJROOT is not defined.  Please set env variable \$BJROOT";
+    exit;
+fi
+
+rpmpath=${BJROOT}/rpm/RPMS/i386/
+
+if [ $# -eq 2 ] ; then
+    launch_script=$1;
+    template=$2;
+else
+    echo "Usage: $0 installation_script templatefile";
+    echo "   e.g. $0 fselaunch fse.release.rpm-spec.template";
+    echo
+    echo "   This script pieces together an installation script "
+    echo "   and a RPM together to produce an executable .bin "
+    echo "   file for end user to install the package on linux."
+    echo
+    echo "   The launch script defines what needs to be done at"
+    echo "   install time. e.g. show license agreement, ask for"
+    echo "   ICENet, do rpm installation etc etc "
+    echo
+    echo "   The script exists so that we can put arbitrary rpm"
+    echo "   into arbitrary install script together"
+    exit 0;
+fi
+
+# Check the inputs
+
+if [ ! -e $launch_script ]; then
+    echo "Invalid launch file: $launch_script";
+    exit 1;
+fi
+
+
+if [ ! -e "$template" ]; then
+    echo "Invalid template file: $template "
+    exit 1;
+fi
+
+# Compute the rpm file from the template
+rpmbase=`head $template | grep Name | cut -f2 -d" "`;
+rpmver=`head $template | grep Version | cut -f2 -d" "`;
+rpmdate=`date +%y%m%d`;
+
+rpmfile=$rpmbase-$rpmver-$rpmdate.i386.rpm
+
+# Generate the RPM file first
+./rpm_gen $template
+
+# Find out the line number of the launch script so that we can append 
+# the rpm file at the back
+launchline=`wc -l $launch_script | cut -f1 -d" "`;
+launchline=$(($launchline+1))
+
+# Do all the replacements
+cat $launch_script | \
+while read line
+    do
+        line=`echo $line | sed "s/___BJLAUNCH_LINE___/${launchline}/"`;
+        line=`echo $line | sed "s/___BJFSE_BASE___/${rpmbase}/"`;
+        line=`echo $line | sed "s/___BJFSE_RPM___/${rpmfile}/"`;
+        echo $line >> /tmp/$$.$launch_script;
+    done
+
+# Glue the script and the RPM together
+
+outfile=`echo $rpmfile | sed "s/\.rpm/\.bin/"`
+
+cat /tmp/$$.$launch_script >> /tmp/$outfile
+cat $rpmpath$rpmfile >> /tmp/$outfile
+chmod a+x /tmp/$outfile
+mv -f /tmp/$outfile $rpmpath$outfile
+
+
